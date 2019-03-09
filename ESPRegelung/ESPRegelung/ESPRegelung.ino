@@ -4,11 +4,6 @@
  Author:	Heiko
 */
 
-TaskHandle_t Task1;
-TaskHandle_t Task2;
-
-
-
 //H-Bridge
 //L9110
 //5V!
@@ -16,7 +11,7 @@ TaskHandle_t Task2;
 const int speepin1 = 12;
 const int speedpin2 = 14;
 // setting PWM properties
-const int freq = 5000;
+const int freq = 40000;
 const int ledChannel = 0;
 const int ledChannel1 = 1;
 const int resolution = 8;
@@ -34,6 +29,7 @@ const int strompin = 25;
 //5V!
 //Digtal Input
 const int pulsepin = 33;
+int rpm;
 
 //https://techtutorialsx.com/2017/09/30/esp32-arduino-external-interrupts/
 
@@ -42,10 +38,12 @@ const int pulsepin = 33;
 void speedcontrol(int pwm, char a) {
 	if (a == 'f') {
 		ledcWrite(ledChannel, pwm);
-		ledcWrite(ledChannel1, 0);
+		//ledcWrite(ledChannel1, 0);
+		digitalWrite(speedpin2, LOW);
 	}
 	else if (a == 'b') {
-		ledcWrite(ledChannel, 0);
+		//ledcWrite(ledChannel, 0);
+		digitalWrite(speedpin2, LOW);
 		ledcWrite(ledChannel1, pwm);
 	}
 	else {
@@ -78,7 +76,7 @@ void IRAM_ATTR handleInterrupt() {
 	portEXIT_CRITICAL_ISR(&mux);
 }
 
-int countpulse() {
+void countpulse() {
 	static unsigned long t2;
 	//Serial.print("t2: ");
 	//Serial.println(t2);
@@ -88,44 +86,18 @@ int countpulse() {
 		//Serial.println(t1);
 		unsigned long zeitdiff = t1 - t2;
 		if (zeitdiff != 0) {
-			Serial.print("zeitdiff: ");
-			Serial.println(zeitdiff);
-			long rpm = 6000000 / zeitdiff;
-			Serial.print("RPM: ");
-			Serial.println(rpm);
+			//Serial.print("zeitdiff: ");
+			//Serial.println(zeitdiff);
+			rpm = 1*1000*1000 / zeitdiff; //sekunden*millisekunden*mikrosekunde
+			//Serial.print("RPM: ");
+			//Serial.println(rpm);
 			t2 = micros();
-			return rpm;
 		}
-
-
 	}
 	t2 = micros();
-
 }
 
 void setup() {
-	xTaskCreatePinnedToCore(
-		Task1code,   /* Task function. */
-		"Task1",     /* name of task. */
-		10000,       /* Stack size of task */
-		NULL,        /* parameter of the task */
-		1,           /* priority of the task */
-		&Task1,      /* Task handle to keep track of created task */
-		0);          /* pin task to core 0 */
-	delay(500);
-
-	//create a task that will be executed in the Task2code() function, with priority 1 and executed on core 1
-	xTaskCreatePinnedToCore(
-		Task2code,   /* Task function. */
-		"Task2",     /* name of task. */
-		10000,       /* Stack size of task */
-		NULL,        /* parameter of the task */
-		1,           /* priority of the task */
-		&Task2,      /* Task handle to keep track of created task */
-		1);          /* pin task to core 1 */
-	delay(500);
-
-
 	Serial.begin(115200);
 	Serial.println("TEST");
 
@@ -137,57 +109,57 @@ void setup() {
 	//https://randomnerdtutorials.com/esp32-pwm-arduino-ide/
 	//https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/ledc.html
 	ledcSetup(ledChannel, freq, resolution);
-	ledcSetup(ledChannel1, freq, resolution);
+	//ledcSetup(ledChannel1, freq, resolution);
 	ledcAttachPin(speepin1, ledChannel);
-	ledcAttachPin(speedpin2, ledChannel1);
+	//ledcAttachPin(speedpin2, ledChannel1);
+
+	pinMode(speedpin2, OUTPUT);
 
 	//provisorisch
-	speedcontrol(180, 'f');
+	speedcontrol(170, 'f');
 }
 
 void loop() {
+	/*static unsigned long previousMillis = 0;
+	unsigned long currentMillis = millis();
+	const long interval = 100;
+	if (currentMillis - previousMillis >= interval) {
+		previousMillis = currentMillis;
+		static int fadevalue = 100;
+		static int fade = 1;
+		if (fadevalue <= 255 && fade == 1) {
+			fadevalue = fadevalue + 5;
+			if (fadevalue >= 255) {
+				fade = 0;
+			}
+		}
+		else if (fadevalue >= 100 && fade == 0) {
+			fadevalue = fadevalue - 5;
+			if (fadevalue <= 100) {
+				fade = 1;
+			}
+		}
+		speedcontrol(fadevalue, 'f');
+	}*/
 
-
-
-}
-
-void Task1code(void * pvParameters) {
-	Serial.print("Task1 running on core ");
-	Serial.println(xPortGetCoreID());
-
-	for (;;) {
-		//if (interruptCounter > 0) {
-
-		//	portENTER_CRITICAL(&mux);
-		//	interruptCounter--;
-		//	portEXIT_CRITICAL(&mux);
-
-		//	numberOfInterrupts++;
-		//	//Serial.print("An interrupt has occurred. Total: ");
-		//	//Serial.println(numberOfInterrupts);
-		//	//Serial.print("RPM: ");
-		//	//Serial.println(countpulse());
-		//}
+	static unsigned long previousMillis1 = 0;
+	unsigned long currentMillis1 = millis();
+	const long interval1 = 500;
+	if (currentMillis1 - previousMillis1 >= interval1) {
+		previousMillis1 = currentMillis1;
+		Serial.println(rpm);
 	}
-}
 
-//Task2code: blinks an LED every 700 ms
-void Task2code(void * pvParameters) {
-	Serial.print("Task2 running on core ");
-	Serial.println(xPortGetCoreID());
+	if (interruptCounter > 0) {
 
-	for (;;) {
-		for (int fadeValue = 255; fadeValue >= 0; fadeValue -= 5) {
-			// sets the value (range from 0 to 255):
-			speedcontrol(fadeValue, 'f');
-			// wait for 30 milliseconds to see the dimming effect
-			delay(30);
-		}
-		for (int fadeValue = 0; fadeValue <= 255; fadeValue += 5) {
-			// sets the value (range from 0 to 255):
-			speedcontrol(fadeValue, 'f');
-			// wait for 30 milliseconds to see the dimming effect
-			delay(30);
-		}
+		portENTER_CRITICAL(&mux);
+		interruptCounter--;
+		portEXIT_CRITICAL(&mux);
+
+		numberOfInterrupts++;
+		//Serial.print("An interrupt has occurred. Total: ");
+		//Serial.println(numberOfInterrupts);
+		//Serial.print("RPM: ");
+		//Serial.println(countpulse());
 	}
 }
