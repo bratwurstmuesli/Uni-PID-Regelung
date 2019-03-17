@@ -3,6 +3,7 @@
  Created:	1/22/2019 2:48:12 PM
  Author:	Heiko
 */
+
 //PID###########################################################
 #include <PID_v1.h>
 double Setpoint, Input, Output;	//Define Variables we'll be connecting to
@@ -16,25 +17,25 @@ RunningAverage currentRA(100);
 
 //H-Brücke######################################################
 //L9110
-//TWO Digital Outputs
-const int speepin1 = 12;
-const int speedpin2 = 14;
-// setting PWM properties
+//Two Digital Outputs
+const byte speepin1 = 12;
+const byte speedpin2 = 14;
+//setting PWM properties
 const int freq = 40000;
 const int ledChannel = 0;
 const int ledChannel1 = 1;
 const int resolution = 8;
 
 //speedpot######################################################
-const int speedpotpin = 34;
+const byte speedpotpin = 34;
 
 //Stromstärke-Messung###########################################
 //MAX471
-const int strompin = 25;
+const byte strompin = 25;
 float current;
 
 //Lichtschranke#################################################
-const int dataIN = 33; //IR sensor INPUT
+const byte dataIN = 33; //IR sensor INPUT
 volatile unsigned long prevmillis; // To store time
 volatile unsigned long duration; // To store time difference
 volatile unsigned long refresh; // To store time for refresh of reading
@@ -51,12 +52,11 @@ void speedcontrol(int pwm, char a) {
 		digitalWrite(speedpin2, LOW);
 	}
 	else if (a == 'b') {
-		digitalWrite(speedpin2, LOW);
-		ledcWrite(ledChannel1, pwm);
+
 	}
 	else {
 		ledcWrite(ledChannel, 0);
-		ledcWrite(ledChannel1, 0);
+		digitalWrite(speedpin2, LOW);
 	}
 }
 
@@ -70,8 +70,8 @@ void setrpm() {
 //wenn groeßer 500ms ist dann wird 0 oder RPM groeßer 2500 oder RPM ploetzlich um 700 steigt dann wird alter wert genutzt
 void rpmmeasure() { // RPM Measurement
 	currentstate = digitalRead(dataIN); // Read IR sensor state
-	if (prevstate != currentstate) {// If there is change in input
-		if (currentstate == HIGH) {// If input only changes from LOW to HIGH
+	if (prevstate != currentstate) { // If there is change in input
+		if (currentstate == HIGH) { // If input only changes from LOW to HIGH
 			duration = (micros() - prevmillis); // Time difference between revolution in microsecond
 			rpm = (60000000 / duration); // rpm = (1/ time millis)*1000*1000*60;
 			if (rpm > 2500 || rpm > rpmold + 700) {
@@ -158,20 +158,20 @@ void loop() {
 
 	//Alle100ms#####################################################
 	static unsigned long previousMillis2 = 0;
-	unsigned long currentMillis2 = millis();
+	currentMillis = millis();
 	const long interval2 = 100;
-	if (currentMillis2 - previousMillis2 >= interval2) {
-		previousMillis2 = currentMillis2;
+	if (currentMillis - previousMillis2 >= interval2) {
+		previousMillis2 = currentMillis;
 
 		setrpm();
 	}
 
 	//Alle10ms######################################################
 	static unsigned long previousMillis1 = 0;
-	unsigned long currentMillis1 = millis();
+	currentMillis = millis();
 	const long interval1 = 10;
-	if (currentMillis1 - previousMillis1 >= interval1) {
-		previousMillis1 = currentMillis1;
+	if (currentMillis - previousMillis1 >= interval1) {
+		previousMillis1 = currentMillis;
 
 		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)rpm;
 		Serial.print(print);
