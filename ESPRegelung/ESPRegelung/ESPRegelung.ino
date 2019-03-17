@@ -6,12 +6,13 @@
 //##############################################################
 #include <PID_v1.h>
 double Setpoint, Input, Output;	//Define Variables we'll be connecting to
-double Kp = 2, Ki = 5, Kd = 1; //Specify the links and initial tuning parameters
+double Kp = 10, Ki = 10, Kd = 0; //Specify the links and initial tuning parameters
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 //##############################################################
 #include "RunningAverage.h"
-RunningAverage myRA(20);
+RunningAverage myRA(100);
 RunningAverage currentRA(100);
+RunningAverage currentRA2(1000);
 //##############################################################
 //H-Bridge L9110
 //TWO Digital Outputs
@@ -28,8 +29,6 @@ const int speedpotpin = 34;
 //MAX471
 const int strompin = 25;
 float current;
-unsigned long currentsum;
-int currentsumwerte;
 //##############################################################
 //Lichtschranke
 const int dataIN = 33; //IR sensor INPUT
@@ -40,6 +39,8 @@ volatile int rpm; // RPM value
 volatile int rpmold;
 boolean currentstate; // Current state of IR input scan
 boolean prevstate; // State of IR sensor in previous scan
+
+boolean newvalueflag; //neuer wert für rpm
 //##############################################################
 
 //WORKING
@@ -65,15 +66,8 @@ void currentsense() {
 	int currentint = analogRead(strompin);
 	//runningAverage(currentint);
 	current = (currentint * 3.3) / 4096;
-
-	if (currentsumwerte == -1) {
-		currentsum = 0;
-	}
-	else {
-		currentsum = currentsum + current;
-	}
-	currentsumwerte++;
 	currentRA.addValue(current);
+	currentRA2.addValue(current);
 	//Serial.print("int: ");
 	//Serial.println(currentint);
 	//Serial.print("Volt: ");
@@ -97,6 +91,7 @@ void rpmmeasure() { // RPM Measurement
 			}
 			myRA.addValue(rpm);
 			prevmillis = micros(); // store time for nect revolution calculation
+			newvalueflag = true;
 		}
 	}
 	prevstate = currentstate; // store this scan (prev scan) data for next scan
@@ -138,9 +133,21 @@ void loop() {
 	rpmmeasure();
 	//##############################################################
 	//PID
-	Input = rpm;
-	myPID.Compute();
-	speedcontrol((int)Output, 'f');
+	if (newvalueflag == true) {
+		newvalueflag = false;
+		//if (isnan(myRA.getAverage())) {
+		//	Input = 0;
+		//}
+		//else {
+		//	Input = (int)myRA.getAverage();
+		//	myRA.clear();
+		//}
+		Input = rpm;
+		myPID.Compute();
+		speedcontrol((int)Output, 'f');
+
+	}
+
 	//##############################################################
 	//CURRENT
 	currentsense();
@@ -152,8 +159,7 @@ void loop() {
 	if (currentMillis - previousMillis >= interval) {
 		previousMillis = currentMillis;
 
-		int analogvalue = analogRead(speedpotpin);
-		Setpoint = map(analogvalue, 0, 4096, 300, 1900);
+
 
 	}
 	//##############################################################
@@ -164,30 +170,30 @@ void loop() {
 	if (currentMillis2 - previousMillis2 >= interval2) {
 		previousMillis2 = currentMillis2;
 
-		
+		int analogvalue = analogRead(speedpotpin);
+		Setpoint = map(analogvalue, 0, 4096, 300, 1900);
 	}
 	//##############################################################
 	//alle 10ms
 	static unsigned long previousMillis1 = 0;
 	unsigned long currentMillis1 = millis();
-	const long interval1 = 10;
+	const long interval1 = 0;
 	if (currentMillis1 - previousMillis1 >= interval1) {
 		previousMillis1 = currentMillis1;
 
-		int currentdurchschnitt = currentsum / currentsumwerte;
-		currentsumwerte = -1; //reset summe
+		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)rpm;
+		Serial.print(print);
+		//String print2 = +',' + (String)(currentRA.getAverage() * 1000) + ',' + (String)(currentRA2.getAverage() * 1000);
+		//Serial.print(print2);
+		Serial.println();
 
-		String print = "3,0," + (String)currentdurchschnitt + ','+ (String)myRA.getAverage();
-		//String print = "2000,0," + (String)(int)Setpoint + ',' + (String)rpm + ',' + (String)currentRA.getAverage() + ',' + (String)myRA.getAverage();
-		Serial.println(print);
-
-		//Serial.print("Setpoint: ");
-		//Serial.println(Setpoint);
-		//Serial.print("rpm: ");
-		//Serial.println((int)myRA.getAverage());
-		//Serial.print("duration: ");
-		//Serial.println(duration);
-		//Serial.println();
+			//Serial.print("Setpoint: ");
+			//Serial.println(Setpoint);
+			//Serial.print("rpm: ");
+			//Serial.println((int)myRA.getAverage());
+			//Serial.print("duration: ");
+			//Serial.println(duration);
+			//Serial.println();
 
 	}
 	//##############################################################
