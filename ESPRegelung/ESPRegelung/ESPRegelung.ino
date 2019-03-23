@@ -21,7 +21,7 @@ RunningAverage currentRA(100);
 const byte speepin1 = 12;
 const byte speedpin2 = 14;
 //setting PWM properties
-const int freq = 40000;
+const int freq = 20000;
 const int ledChannel = 0;
 const int ledChannel1 = 1;
 const int resolution = 8;
@@ -63,7 +63,7 @@ void speedcontrol(int pwm, char a) {
 //FULLY_WORKING
 void setrpm() {
 	int analogvalue = analogRead(speedpotpin);
-	Setpoint = map(analogvalue, 0, 4096, 300, 1900);
+	Setpoint = map(analogvalue, 0, 4096, 300, 2100);
 }
 
 //OKAISH-WORKING
