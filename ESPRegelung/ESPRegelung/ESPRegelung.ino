@@ -63,7 +63,8 @@ void speedcontrol(int pwm, char a) {
 //FULLY_WORKING
 void setrpm() {
 	int analogvalue = analogRead(speedpotpin);
-	Setpoint = map(analogvalue, 0, 4096, 300, 2100);
+	//Setpoint = map(analogvalue, 0, 4096, 300, 2100);
+	Setpoint = map(analogvalue, 0, 4096, 0, 255);
 }
 
 //OKAISH-WORKING
@@ -104,7 +105,7 @@ void pidregel() {
 		//}
 		Input = rpm;
 		myPID.Compute();
-		speedcontrol((int)Output, 'f');
+		speedcontrol((int)Setpoint, 'f');
 	}
 }
 
