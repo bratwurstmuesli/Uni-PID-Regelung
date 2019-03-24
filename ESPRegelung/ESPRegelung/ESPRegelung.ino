@@ -3,6 +3,19 @@
  Created:	1/22/2019 2:48:12 PM
  Author:	Heiko
 */
+//Webserver#####################################################
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+
+const char* ssid = "\xe2\x9c\x8c\xef\xb8\x8f\xf0\x9f\x98\x81\xe2\x9c\x8c\xef\xb8\x8f";
+const char* password = "123mannheim#1";
+
+WebServer server(80);
+
+//include HTML SEITE
+#include "index.h"
 //I2C###########################################################
 #include <Wire.h>
 #define SDA1 21
@@ -29,6 +42,81 @@ const byte speedpotpin = 33;
 const byte strompin = 25;
 float current;
 
+void handledata() {
+	String data = "";
+
+	data = "Kp: ";
+	data += (String)Kp;
+	data += " ";
+
+	data += "Ki: ";
+	data += (String)Ki;
+	data += " ";
+
+	data += "Kd: ";
+	data += (String)Kd;
+	data += " ";
+
+	data += "Setpoint: ";
+	data += (String)Setpoint;
+	data += " ";
+
+	data += "Input: ";
+	data += (String)Input;
+	data += " ";
+
+	data += "Output: ";
+	data += (String)Output;
+	data += " ";
+
+	server.send(200, "text/html", data);
+}
+
+void handlenotfound() {
+	//server.send(404, "text/plain", "404: Not found");
+	server.sendHeader("Location", "/", true);   //Redirect to our html web page
+	server.send(302, "text/plane", "");
+}
+
+void handlemainweb() {
+	String page = MAIN_page;
+	server.send(200, "text/html", page);
+}
+
+void handleKp() {
+	String data = (String)Kp;
+	server.send(200, "text/html", data);
+}
+
+void handleKi() {
+	String data = (String)Ki;
+	server.send(200, "text/html", data);
+}
+
+void handleKd() {
+	String data = (String)Kd;
+	server.send(200, "text/html", data);
+}
+
+void handleSetpoint() {
+	String data = (String)Setpoint;
+	server.send(200, "text/html", data);
+}
+
+void handleInput() {
+	String data = (String)Input;
+	server.send(200, "text/html", data);
+}
+
+void handleOutput() {
+	String data = (String)Output;
+	server.send(200, "text/html", data);
+}
+
+void debug() {
+	String data = "debug Webpage";
+	server.send(200, "text/html", data);
+}
 
 //FULLY_WORKING
 void setrpm() {
@@ -91,9 +179,49 @@ void setup() {
 	//PID###########################################################
 	myPID.SetOutputLimits(0, 255);
 	myPID.SetMode(AUTOMATIC);
+
+	WiFi.mode(WIFI_STA);
+	WiFi.begin(ssid, password);
+
+	while (WiFi.status() != WL_CONNECTED) {
+		delay(500);
+		Serial.print(".");
+	}
+	Serial.println("");
+	Serial.print("Connected to ");
+	Serial.println(ssid);
+	Serial.print("IP address: ");
+	Serial.println(WiFi.localIP());
+
+	if (MDNS.begin("esp32")) {
+		Serial.print("mDNS responder started: http://");
+		Serial.print("esp32");
+		Serial.println(".local");
+	}
+
+	//Pages
+	//Mainseite
+	server.on("/", handlemainweb);
+
+	//datenkomplett
+	server.on("/data.txt", handledata);
+
+	//einzelne Daten
+	server.on("/Kp", handleKp);
+	server.on("/Ki", handleKi);
+	server.on("/Kd", handleKd);
+	server.on("/Setpoint", handleSetpoint);
+	server.on("/Input", handleInput);
+	server.on("/Output", handleOutput);
+
+	server.on("/debug", debug);
+
+	server.onNotFound(handlenotfound);
+	server.begin();
 }
 
 void loop() {
+	server.handleClient();
 
 	//Current#######################################################
 	currentsense();
@@ -129,10 +257,10 @@ void loop() {
 	if (currentMillis - previousMillis1 >= interval1) {
 		previousMillis1 = currentMillis;
 
-		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)rpm;
-		Serial.print(print);
+		//String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)rpm;
+		//Serial.print(print);
 		//String print2 = +',' + (String)(currentRA.getAverage() * 1000) );
 		//Serial.print(print2);
-		Serial.println();
+		//Serial.println();
 	}
 }
