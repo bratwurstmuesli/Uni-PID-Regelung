@@ -107,11 +107,16 @@
     <DebuggerFlavor>VisualMicroDebugger</DebuggerFlavor>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="ArduinoNano.ino">
+      <FileType>CppCode</FileType>
+    </None>
     <None Include="ESPRegelung.ino">
       <FileType>CppCode</FileType>
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Task0.h" />
+    <ClInclude Include="Task1.h" />
     <ClInclude Include="__vm\.ESPRegelung.vsarduino.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

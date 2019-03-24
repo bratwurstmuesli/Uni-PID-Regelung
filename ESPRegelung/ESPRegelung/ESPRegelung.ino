@@ -6,8 +6,10 @@
 
 //PID###########################################################
 #include <PID_v1.h>
+
+
 double Setpoint, Input, Output;	//Define Variables we'll be connecting to
-double Kp = 10, Ki = 2, Kd = 0; //Specify the links and initial tuning parameters
+double Kp = 2, Ki = 2, Kd = 0; //Specify the links and initial tuning parameters
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 //RunningAverage###############################################
@@ -63,7 +65,7 @@ void speedcontrol(int pwm, char a) {
 //FULLY_WORKING
 void setrpm() {
 	int analogvalue = analogRead(speedpotpin);
-	//Setpoint = map(analogvalue, 0, 4096, 300, 2100);
+	//Setpoint = map(analogvalue, 0, 4096, 0, 2000);
 	Setpoint = map(analogvalue, 0, 4096, 0, 255);
 }
 
@@ -75,13 +77,13 @@ void rpmmeasure() { // RPM Measurement
 		if (currentstate == HIGH) { // If input only changes from LOW to HIGH
 			duration = (micros() - prevmillis); // Time difference between revolution in microsecond
 			rpm = (60000000 / duration); // rpm = (1/ time millis)*1000*1000*60;
-			if (rpm > 2500 || rpm > rpmold + 700) {
-				rpm = rpmold;
-			}
-			else {
-				rpmold = rpm;
-			}
-			myRA.addValue(rpm);
+			//if (rpm > 2500 || rpm > rpmold + 700) {
+			//	rpm = rpmold;
+			//}
+			//else {
+			//	rpmold = rpm;
+			//}
+			//
 			prevmillis = micros(); // store time for nect revolution calculation
 			newvalueflag = true;
 		}
@@ -90,23 +92,27 @@ void rpmmeasure() { // RPM Measurement
 	if (micros() - prevmillis > 500000) {
 		rpm = 0;
 	}
+	myRA.addValue(rpm);
 }
 
 //OKAISH-WORKING
 void pidregel() {
 	if (newvalueflag == true) {
 		newvalueflag = false;
-		//if (isnan(myRA.getAverage())) {
-		//	Input = 0;
-		//}
-		//else {
-		//	Input = (int)myRA.getAverage();
-		//	myRA.clear();
-		//}
-		Input = rpm;
-		myPID.Compute();
-		speedcontrol((int)Setpoint, 'f');
+		if (isnan(myRA.getAverage())) {
+			Input = rpm;
+		}
+		else {
+			Input = (int)myRA.getAverage();
+		}
+
+		//Input = rpm;
+
 	}
+	myPID.Compute();
+
+	Output = Setpoint;
+	speedcontrol((int)Output, 'f');
 }
 
 //TODO
@@ -126,6 +132,7 @@ void setup() {
 
 	//PID###########################################################
 	pinMode(dataIN, INPUT);
+	myPID.SetOutputLimits(0, 255);
 	prevmillis = 0;
 	prevstate = LOW;
 	myPID.SetMode(AUTOMATIC);

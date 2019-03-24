@@ -16,9 +16,16 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ESPRegelung.ino" />
+    <None Include="ArduinoNano.ino" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.ESPRegelung.vsarduino.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Task0.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Task1.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
