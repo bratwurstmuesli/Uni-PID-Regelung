@@ -3,11 +3,15 @@
  Created:	1/22/2019 2:48:12 PM
  Author:	Heiko
 */
+//I2C###########################################################
+#include <Wire.h>
+#define SDA1 21
+#define SCL1 22
+TwoWire WireONE = TwoWire(0);
+unsigned long rpm;
 
 //PID###########################################################
 #include <PID_v1.h>
-
-
 double Setpoint, Input, Output;	//Define Variables we'll be connecting to
 double Kp = 2, Ki = 2, Kd = 0; //Specify the links and initial tuning parameters
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
@@ -17,102 +21,26 @@ PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 RunningAverage myRA(100);
 RunningAverage currentRA(100);
 
-//H-Brücke######################################################
-//L9110
-//Two Digital Outputs
-const byte speepin1 = 12;
-const byte speedpin2 = 14;
-//setting PWM properties
-const int freq = 20000;
-const int ledChannel = 0;
-const int ledChannel1 = 1;
-const int resolution = 8;
-
 //speedpot######################################################
-const byte speedpotpin = 34;
+const byte speedpotpin = 33;
 
 //Stromstärke-Messung###########################################
 //MAX471
 const byte strompin = 25;
 float current;
 
-//Lichtschranke#################################################
-const byte dataIN = 33; //IR sensor INPUT
-volatile unsigned long prevmillis; // To store time
-volatile unsigned long duration; // To store time difference
-volatile unsigned long refresh; // To store time for refresh of reading
-volatile int rpm; // RPM value
-volatile int rpmold;
-boolean currentstate; // Current state of IR input scan
-boolean prevstate; // State of IR sensor in previous scan
-boolean newvalueflag; //neuer wert für rpm
-
-//FULLY_WORKING
-void speedcontrol(int pwm, char a) {
-	if (a == 'f') {
-		ledcWrite(ledChannel, pwm);
-		digitalWrite(speedpin2, LOW);
-	}
-	else if (a == 'b') {
-
-	}
-	else {
-		ledcWrite(ledChannel, 0);
-		digitalWrite(speedpin2, LOW);
-	}
-}
 
 //FULLY_WORKING
 void setrpm() {
 	int analogvalue = analogRead(speedpotpin);
-	//Setpoint = map(analogvalue, 0, 4096, 0, 2000);
-	Setpoint = map(analogvalue, 0, 4096, 0, 255);
+	Setpoint = map(analogvalue, 0, 4095, 0, 200000);
 }
 
-//OKAISH-WORKING
-//wenn groeßer 500ms ist dann wird 0 oder RPM groeßer 2500 oder RPM ploetzlich um 700 steigt dann wird alter wert genutzt
-void rpmmeasure() { // RPM Measurement
-	currentstate = digitalRead(dataIN); // Read IR sensor state
-	if (prevstate != currentstate) { // If there is change in input
-		if (currentstate == HIGH) { // If input only changes from LOW to HIGH
-			duration = (micros() - prevmillis); // Time difference between revolution in microsecond
-			rpm = (60000000 / duration); // rpm = (1/ time millis)*1000*1000*60;
-			//if (rpm > 2500 || rpm > rpmold + 700) {
-			//	rpm = rpmold;
-			//}
-			//else {
-			//	rpmold = rpm;
-			//}
-			//
-			prevmillis = micros(); // store time for nect revolution calculation
-			newvalueflag = true;
-		}
-	}
-	prevstate = currentstate; // store this scan (prev scan) data for next scan
-	if (micros() - prevmillis > 500000) {
-		rpm = 0;
-	}
-	myRA.addValue(rpm);
-}
 
 //OKAISH-WORKING
 void pidregel() {
-	if (newvalueflag == true) {
-		newvalueflag = false;
-		if (isnan(myRA.getAverage())) {
-			Input = rpm;
-		}
-		else {
-			Input = (int)myRA.getAverage();
-		}
-
-		//Input = rpm;
-
-	}
+	Input = (double)rpm;
 	myPID.Compute();
-
-	Output = Setpoint;
-	speedcontrol((int)Output, 'f');
 }
 
 //TODO
@@ -125,35 +53,55 @@ void currentsense() {
 	//Serial.println(current);
 }
 
+//FULLY-WORKING
+void sendI2C() {
+	WireONE.beginTransmission(8); // transmit to device #8
+	WireONE.write((int)Output);   // sends
+	WireONE.endTransmission();    // stop transmitting
+}
+
+void receiveI2C() {
+	int32_t bigNum;
+	byte a, b, c, d;
+
+	WireONE.requestFrom(8, 4);  
+
+	a = WireONE.read();
+	b = WireONE.read();
+	c = WireONE.read();
+	d = WireONE.read();
+
+	bigNum = a;
+	bigNum = (bigNum << 8) | b;
+	bigNum = (bigNum << 8) | c;
+	bigNum = (bigNum << 8) | d;
+
+	rpm = (unsigned)(long)bigNum;
+	//Serial.println(bigNum);
+}
+
 void setup() {
 	//Serial########################################################
 	Serial.begin(115200);
 	Serial.println("TEST");
 
-	//PID###########################################################
-	pinMode(dataIN, INPUT);
-	myPID.SetOutputLimits(0, 255);
-	prevmillis = 0;
-	prevstate = LOW;
-	myPID.SetMode(AUTOMATIC);
+	//I2C###########################################################
+	WireONE.begin(SDA1, SCL1, 400000); // SDA pin 21, SCL pin 22 TTGO TQ
 
-	//PWM###########################################################
-	//https://randomnerdtutorials.com/esp32-pwm-arduino-ide/
-	//https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/ledc.html
-	ledcSetup(ledChannel, freq, resolution);
-	ledcAttachPin(speepin1, ledChannel);
-	pinMode(speedpin2, OUTPUT);
+	//PID###########################################################
+	myPID.SetOutputLimits(0, 255);
+	myPID.SetMode(AUTOMATIC);
 }
 
 void loop() {
-	//RPM-Measure###################################################
-	rpmmeasure();
 
 	//Current#######################################################
 	currentsense();
 
 	//PID-Regelung##################################################
+	receiveI2C();
 	pidregel();
+	sendI2C();
 
 	//Alle1000ms####################################################
 	static unsigned long previousMillis = 0;
@@ -161,7 +109,7 @@ void loop() {
 	const long interval = 1000;
 	if (currentMillis - previousMillis >= interval) {
 		previousMillis = currentMillis;
-
+		
 	}
 
 	//Alle100ms#####################################################
@@ -170,8 +118,8 @@ void loop() {
 	const long interval2 = 100;
 	if (currentMillis - previousMillis2 >= interval2) {
 		previousMillis2 = currentMillis;
-
 		setrpm();
+
 	}
 
 	//Alle10ms######################################################

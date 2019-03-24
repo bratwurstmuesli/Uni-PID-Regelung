@@ -107,6 +107,5 @@ typedef long __PTRDIFF_TYPE__;
 #define noInterrupts() cli()
 
 #include "ESPRegelung.ino"
-#include "ArduinoNano.ino"
 #endif
 #endif
