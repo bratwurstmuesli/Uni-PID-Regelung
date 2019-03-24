@@ -77,10 +77,59 @@ void handlenotfound() {
 	server.sendHeader("Location", "/", true);   //Redirect to our html web page
 	server.send(302, "text/plane", "");
 }
-
+//|| server.hasArg("delay1") || server.hasArg("delay2") || server.hasArg("delay3")
 void handlemainweb() {
-	String page = MAIN_page;
-	server.send(200, "text/html", page);
+	if (server.hasArg("delay0")) {
+		handleSubmit();
+		Serial.println("test1");
+	}
+	else {
+		String page = MAIN_page;
+		server.send(200, "text/html", page);
+	}
+	Serial.println("test4");
+}
+//<INPUT type = "text" style = "width:100px" name = "delay1">
+//<INPUT type = "text" style = "width:100px" name = "delay2">
+//<INPUT type = "text" style = "width:100px" name = "delay3">
+
+void returnFail(String msg)
+{
+	server.sendHeader("Connection", "close");
+	server.sendHeader("Access-Control-Allow-Origin", "*");
+	server.send(500, "text/plain", msg + "\r\n");
+}
+
+void handleSubmit()
+{
+	Serial.println("test2");
+	String string0;
+	String string1;
+	String string2;
+	String string3;
+
+	if (server.hasArg("delay0")) {
+		string0 = server.arg("delay0");
+		Kp = string0.toInt();
+		Serial.println("test3");
+	}
+	if (server.hasArg("delay1")) {
+		string0 = server.arg("delay1");
+		Ki = string1.toInt();
+	}
+	if (server.hasArg("delay2")) {
+		string0 = server.arg("delay2");
+		Kd = string2.toInt();
+	}
+	if (server.hasArg("delay3")) {
+		string0 = server.arg("delay3");
+		Setpoint = string3.toInt();
+	}
+
+	Serial.println("new: " + (String)(int)Kp + (String)(int)Ki + (String)(int)Kd + (String)(int)Setpoint);
+	Serial.println("done");
+	//String page = MAIN_page;
+	//server.send(200, "text/html", page);
 }
 
 void handleKp() {
@@ -152,7 +201,7 @@ void receiveI2C() {
 	int32_t bigNum;
 	byte a, b, c, d;
 
-	WireONE.requestFrom(8, 4);  
+	WireONE.requestFrom(8, 4);
 
 	a = WireONE.read();
 	b = WireONE.read();
@@ -224,12 +273,12 @@ void loop() {
 	server.handleClient();
 
 	//Current#######################################################
-	currentsense();
+	//currentsense();
 
 	//PID-Regelung##################################################
-	receiveI2C();
-	pidregel();
-	sendI2C();
+	//receiveI2C();
+	//pidregel();
+	//sendI2C();
 
 	//Alle1000ms####################################################
 	static unsigned long previousMillis = 0;
@@ -237,7 +286,7 @@ void loop() {
 	const long interval = 1000;
 	if (currentMillis - previousMillis >= interval) {
 		previousMillis = currentMillis;
-		
+
 	}
 
 	//Alle100ms#####################################################
