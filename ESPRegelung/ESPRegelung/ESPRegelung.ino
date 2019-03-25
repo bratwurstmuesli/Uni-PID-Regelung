@@ -8,14 +8,19 @@
 #include <WiFiClient.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
+#include <WebSocketsServer.h>
 
 const char* ssid = "\xe2\x9c\x8c\xef\xb8\x8f\xf0\x9f\x98\x81\xe2\x9c\x8c\xef\xb8\x8f";
 const char* password = "123mannheim#1";
 
 WebServer server(80);
+WebSocketsServer webSocket = WebSocketsServer(81);
+
+String Websocket_page = "<!DOCTYPE html><html><style>input[type=\"text\"]{width: 90%; height: 3vh;}input[type=\"button\"]{width: 9%; height: 3.6vh;}.rxd{height: 90vh;}textarea{width: 99%; height: 100%; resize: none;}</style><script>var Socket;function start(){Socket=new WebSocket('ws://' + window.location.hostname + ':81/'); Socket.onmessage=function(evt){document.getElementById(\"rxConsole\").value +=evt.data;}}function enterpressed(){Socket.send(document.getElementById(\"txbuff\").value); document.getElementById(\"txbuff\").value=\"\";}</script><body onload=\"javascript:start();\"> <div><input class=\"txd\" type=\"text\" id=\"txbuff\" onkeydown=\"if(event.keyCode==13) enterpressed();\"><input class=\"txd\" type=\"button\" onclick=\"enterpressed();\" value=\"Send\" > </div><br><div class=\"rxd\"> <textarea id=\"rxConsole\" readonly></textarea> </div></body></html>";
 
 //include HTML SEITE
 #include "index.h"
+#include "Task0.h"
 //I2C###########################################################
 #include <Wire.h>
 #define SDA1 21
@@ -217,6 +222,13 @@ void receiveI2C() {
 	//Serial.println(bigNum);
 }
 
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+	if (type == WStype_TEXT) {
+		for (int i = 0; i < length; i++) Serial.print((char)payload[i]);
+		Serial.println();
+	}
+}
+
 void setup() {
 	//Serial########################################################
 	Serial.begin(115200);
@@ -267,10 +279,23 @@ void setup() {
 
 	server.onNotFound(handlenotfound);
 	server.begin();
+
+	//websocket
+	webSocket.begin();
+	webSocket.onEvent(webSocketEvent);
+	server.on("/websocket", []() {
+		server.send(200, "text/html", Websocket_page);
+	});
 }
 
 void loop() {
+	webSocket.loop();
 	server.handleClient();
+
+	if (Serial.available() > 0) {
+		char c[] = { (char)Serial.read() };
+		webSocket.broadcastTXT(c, sizeof(c));
+	}
 
 	//Current#######################################################
 	//currentsense();
