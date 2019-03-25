@@ -16,11 +16,11 @@ const char* password = "123mannheim#1";
 WebServer server(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
 
-String Websocket_page = "<!DOCTYPE html><html><style>input[type=\"text\"]{width: 90%; height: 3vh;}input[type=\"button\"]{width: 9%; height: 3.6vh;}.rxd{height: 90vh;}textarea{width: 99%; height: 100%; resize: none;}</style><script>var Socket;function start(){Socket=new WebSocket('ws://' + window.location.hostname + ':81/'); Socket.onmessage=function(evt){document.getElementById(\"rxConsole\").value +=evt.data;}}function enterpressed(){Socket.send(document.getElementById(\"txbuff\").value); document.getElementById(\"txbuff\").value=\"\";}</script><body onload=\"javascript:start();\"> <div><input class=\"txd\" type=\"text\" id=\"txbuff\" onkeydown=\"if(event.keyCode==13) enterpressed();\"><input class=\"txd\" type=\"button\" onclick=\"enterpressed();\" value=\"Send\" > </div><br><div class=\"rxd\"> <textarea id=\"rxConsole\" readonly></textarea> </div></body></html>";
+//String Websocket_page1 = "<!DOCTYPE html><html><style>input[type=\"text\"]{width: 90%; height: 3vh;}input[type=\"button\"]{width: 9%; height: 3.6vh;}.rxd{height: 90vh;}textarea{width: 99%; height: 100%; resize: none;}</style><script>var Socket;function start(){Socket=new WebSocket('ws://' + window.location.hostname + ':81/'); Socket.onmessage=function(evt){document.getElementById(\"rxConsole\").value +=evt.data;}}function enterpressed(){Socket.send(document.getElementById(\"txbuff\").value); document.getElementById(\"txbuff\").value=\"\";}</script><body onload=\"javascript:start();\"> <div><input class=\"txd\" type=\"text\" id=\"txbuff\" onkeydown=\"if(event.keyCode==13) enterpressed();\"><input class=\"txd\" type=\"button\" onclick=\"enterpressed();\" value=\"Send\" > </div><br><div class=\"rxd\"> <textarea id=\"rxConsole\" readonly></textarea> </div></body></html>";
 
 //include HTML SEITE
-#include "index.h"
 #include "Task0.h"
+#include "index.h"
 //I2C###########################################################
 #include <Wire.h>
 #define SDA1 21
@@ -223,9 +223,52 @@ void receiveI2C() {
 }
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
-	if (type == WStype_TEXT) {
-		for (int i = 0; i < length; i++) Serial.print((char)payload[i]);
+	switch (type) {
+	case WStype_DISCONNECTED:
+		Serial.println("Websocket disconnected");
+		break;
+
+	case WStype_CONNECTED:
+		Serial.println("Websocket connected.");
+		break;
+
+	case WStype_TEXT:
+		for (int i = 0; i < length; i++) {
+			Serial.print((char)payload[i]);
+		}
 		Serial.println();
+
+		char datain[20];
+		if ((char)payload[0] == '#') {
+			for (int i = 1; i < length; i++) {
+				datain[i-1] = (char)payload[i];
+			}
+			char delimiter[] = ",";
+			char *ptr;
+
+			// initialisieren und ersten Abschnitt erstellen
+			ptr = strtok(datain, delimiter);
+
+			int b = 1;
+			int x = atoi(ptr);
+			Kp = (double)x;
+			b++;
+			while (ptr != NULL) {
+				//printf("Abschnitt gefunden: %s\n", ptr);
+				//// naechsten Abschnitt erstellen
+				ptr = strtok(NULL, delimiter);
+				if (b == 2) {
+					int y = atoi(ptr);
+					Ki = (double)y;
+				}
+				else if (b == 3) {
+					int z = atoi(ptr);
+					Kd = (double)z;
+				}
+				b++;
+			}
+		}
+		break;
 	}
 }
 
@@ -301,9 +344,9 @@ void loop() {
 	//currentsense();
 
 	//PID-Regelung##################################################
-	//receiveI2C();
-	//pidregel();
-	//sendI2C();
+	receiveI2C();
+	pidregel();
+	sendI2C();
 
 	//Alle1000ms####################################################
 	static unsigned long previousMillis = 0;
@@ -331,10 +374,15 @@ void loop() {
 	if (currentMillis - previousMillis1 >= interval1) {
 		previousMillis1 = currentMillis;
 
-		//String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)rpm;
+		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)rpm;
 		//Serial.print(print);
 		//String print2 = +',' + (String)(currentRA.getAverage() * 1000) );
 		//Serial.print(print2);
 		//Serial.println();
+
+		//print to websocket
+		//char c[print.length() + 1];
+		//print.toCharArray(c, print.length()+1);
+		//webSocket.broadcastTXT(c, sizeof(c));
 	}
 }

@@ -1,30 +1,35 @@
-const char Websocket_page1[] PROGMEM = R"=====(
+//this page is not being used somehow...
+
+const char Websocket_page[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html>
-<style>
 
-input[type = "text"]{
-  width: 90 % ;
-  height: 3vh;
-}
-
-input[type = "button"]{
-  width: 9 % ;
-  height: 3.6vh;
-}
-
-.rxd{
-  height: 90vh;
-}
-
-textarea{
-  width: 99 % ;
-  height: 100 % ;
-  resize: none;
-}
-
-
-< / style>
+<body>
+  <center>
+    <header>
+      <h1>LED Control</h1>
+    </header>
+    <div>
+      <table>
+        <tr>
+          <td style="width:40px; text-align: right">Kp: </td>
+          <td><input class="enabled" id="Kp" type="range" min="0" max="10" step="1" oninput="sendPID();" value="0"></td>
+		<td><textarea class="rxd" id="Kpf"  resize="none" readonly></textarea></td>
+        </tr>
+        <tr>
+          <td style="width:40px; text-align: right">Ki: </td>
+          <td><input class="enabled" id="Ki" type="range" min="0" max="10" step="1" oninput="sendPID();" value="0"></td>
+		<td><textarea class="rxd" id="Kif"  resize="none" readonly></textarea></td>
+        </tr>
+        <tr>
+          <td style="width:40px; text-align: right">Kd: </td>
+          <td><input class="enabled" id="Kd" type="range" min="0" max="10" step="1" oninput="sendPID();" value="0"></td>
+		  <td><label class="rxd" id="Kdf">0</label></textarea></td>
+        </tr>
+      </table>
+    </div>
+  </center>
+</body>
 
 <script>
 var Socket;
@@ -32,26 +37,22 @@ function start() {
 	Socket = new WebSocket('ws://' + window.location.hostname + ':81/');
 
 	Socket.onmessage = function(evt) {
-		document.getElementById("rxConsole").value += evt.data;
-	}
-
+	document.getElementById("Kdf").value = evt.data;
+  }
 }
 
-function enterpressed() {
-	Socket.send(document.getElementById("txbuff").value);
-	document.getElementById("txbuff").value = "";
+function sendPID () {
+	var Kp = document.getElementById("Kp").value;
+	var Ki = document.getElementById('Ki').value;
+	var Kd = document.getElementById('Kd').value;
+	var pidstr = '#' + Kp.toString() + ',' + Ki.toString() + ',' + Kd.toString() + ',';
+	Socket.send(pidstr);
 }
-< / script>
+
+</script>
 
 <body onload = "javascript:start();">
-<div>
-<input class = "txd" type = "text" id = "txbuff" onkeydown = "if(event.keyCode == 13) enterpressed();">
-<input class = "txd" type = "button" onclick = "enterpressed();" value = "Send" >
-< / div>
-<br>
-<div class = "rxd">
-<textarea id = "rxConsole" readonly>< / textarea>
-< / div>
-< / body>
-< / html>
+</body>
+
+</html>
 )=====";
