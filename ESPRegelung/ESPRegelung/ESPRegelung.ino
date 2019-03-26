@@ -9,18 +9,15 @@
 #include <WebServer.h>
 #include <ESPmDNS.h>
 #include <WebSocketsServer.h>
-
 const char* ssid = "\xe2\x9c\x8c\xef\xb8\x8f\xf0\x9f\x98\x81\xe2\x9c\x8c\xef\xb8\x8f";
 const char* password = "123mannheim#1";
-
 WebServer server(80);
+
+//Websocket#####################################################
 WebSocketsServer webSocket = WebSocketsServer(81);
-
-//String Websocket_page1 = "<!DOCTYPE html><html><style>input[type=\"text\"]{width: 90%; height: 3vh;}input[type=\"button\"]{width: 9%; height: 3.6vh;}.rxd{height: 90vh;}textarea{width: 99%; height: 100%; resize: none;}</style><script>var Socket;function start(){Socket=new WebSocket('ws://' + window.location.hostname + ':81/'); Socket.onmessage=function(evt){document.getElementById(\"rxConsole\").value +=evt.data;}}function enterpressed(){Socket.send(document.getElementById(\"txbuff\").value); document.getElementById(\"txbuff\").value=\"\";}</script><body onload=\"javascript:start();\"> <div><input class=\"txd\" type=\"text\" id=\"txbuff\" onkeydown=\"if(event.keyCode==13) enterpressed();\"><input class=\"txd\" type=\"button\" onclick=\"enterpressed();\" value=\"Send\" > </div><br><div class=\"rxd\"> <textarea id=\"rxConsole\" readonly></textarea> </div></body></html>";
-
-//include HTML SEITE
 #include "Task0.h"
 #include "index.h"
+
 //I2C###########################################################
 #include <Wire.h>
 #define SDA1 21
@@ -33,6 +30,7 @@ unsigned long rpm;
 double Setpoint, Input, Output;	//Define Variables we'll be connecting to
 double Kp = 2, Ki = 2, Kd = 0; //Specify the links and initial tuning parameters
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
+boolean changeflag = false;
 
 //RunningAverage###############################################
 #include "RunningAverage.h"
@@ -175,7 +173,9 @@ void debug() {
 //FULLY_WORKING
 void setrpm() {
 	int analogvalue = analogRead(speedpotpin);
-	Setpoint = map(analogvalue, 0, 4095, 0, 200000);
+	int Setpointint = map(analogvalue, 0, 4095, 0, 200);
+	Setpoint = (double)(Setpointint*1000);
+	changeflag = true;
 }
 
 
@@ -238,7 +238,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 		}
 		Serial.println();
 
-		char datain[20];
+		char datain[100];
 		if ((char)payload[0] == '#') {
 			for (int i = 1; i < length; i++) {
 				datain[i-1] = (char)payload[i];
@@ -265,11 +265,31 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 					int z = atoi(ptr);
 					Kd = (double)z;
 				}
+				else if (b == 4) {
+					int w = atoi(ptr);
+					Setpoint = (double)w;
+				}
 				b++;
 			}
+			changeflag = true;
 		}
 		break;
 	}
+}
+
+void SendSocket() {
+		if (changeflag == true) {
+			String stringOne = 'D' + ',' + (String)Kp + ',' + (String)Ki + ',' + (String)Kp + ',' + (String)Setpoint;
+			char str[stringOne.length() + 1];
+			stringOne.toCharArray(str, stringOne.length() + 1);
+			webSocket.broadcastTXT(str, sizeof(str));
+			changeflag = false;
+		}
+		String stringTwo = 'R' + ',' + (String)Input + ',' + (String)Output;
+		char str1[stringTwo.length() + 1];
+		stringTwo.toCharArray(str1, stringTwo.length() + 1);
+		webSocket.broadcastTXT(str1, sizeof(str1));
+	
 }
 
 void setup() {
@@ -284,9 +304,9 @@ void setup() {
 	myPID.SetOutputLimits(0, 255);
 	myPID.SetMode(AUTOMATIC);
 
+	//Wifi##########################################################
 	WiFi.mode(WIFI_STA);
 	WiFi.begin(ssid, password);
-
 	while (WiFi.status() != WL_CONNECTED) {
 		delay(500);
 		Serial.print(".");
@@ -296,13 +316,14 @@ void setup() {
 	Serial.println(ssid);
 	Serial.print("IP address: ");
 	Serial.println(WiFi.localIP());
-
+	//mDNS##########################################################
 	if (MDNS.begin("esp32")) {
 		Serial.print("mDNS responder started: http://");
 		Serial.print("esp32");
 		Serial.println(".local");
 	}
 
+	//Websites######################################################
 	//Pages
 	//Mainseite
 	server.on("/", handlemainweb);
@@ -323,7 +344,7 @@ void setup() {
 	server.onNotFound(handlenotfound);
 	server.begin();
 
-	//websocket
+	//Websocket#####################################################
 	webSocket.begin();
 	webSocket.onEvent(webSocketEvent);
 	server.on("/websocket", []() {
@@ -332,13 +353,12 @@ void setup() {
 }
 
 void loop() {
+	//Websocket#####################################################
 	webSocket.loop();
-	server.handleClient();
+	SendSocket();
 
-	if (Serial.available() > 0) {
-		char c[] = { (char)Serial.read() };
-		webSocket.broadcastTXT(c, sizeof(c));
-	}
+	//Websites######################################################
+	server.handleClient();
 
 	//Current#######################################################
 	//currentsense();
