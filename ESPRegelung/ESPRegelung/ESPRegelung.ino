@@ -3,6 +3,16 @@
  Created:	1/22/2019 2:48:12 PM
  Author:	Heiko
 */
+
+
+
+//TODO
+//PID values with double
+//draw graph
+//implement current measurement
+//cascade control
+
+
 //Webserver#####################################################
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -45,52 +55,11 @@ const byte speedpotpin = 33;
 const byte strompin = 25;
 float current;
 
-void handledata() {
-	String data = "";
-
-	data = "Kp: ";
-	data += (String)Kp;
-	data += " ";
-
-	data += "Ki: ";
-	data += (String)Ki;
-	data += " ";
-
-	data += "Kd: ";
-	data += (String)Kd;
-	data += " ";
-
-	data += "Setpoint: ";
-	data += (String)Setpoint;
-	data += " ";
-
-	data += "Input: ";
-	data += (String)Input;
-	data += " ";
-
-	data += "Output: ";
-	data += (String)Output;
-	data += " ";
-
-	server.send(200, "text/html", data);
-}
 
 void handlenotfound() {
 	//server.send(404, "text/plain", "404: Not found");
-	server.sendHeader("Location", "/", true);   //Redirect to our html web page
+	server.sendHeader("Location", "/websocket", true);   //Redirect to our html web page
 	server.send(302, "text/plane", "");
-}
-
-void handlemainweb() {
-	if (server.hasArg("delay0")) {
-		handleSubmit();
-		//Serial.println("test1");
-	}
-	else {
-		String page = MAIN_page;
-		server.send(200, "text/html", page);
-	}
-	//Serial.println("test4");
 }
 
 void returnFail(String msg)
@@ -98,73 +67,6 @@ void returnFail(String msg)
 	server.sendHeader("Connection", "close");
 	server.sendHeader("Access-Control-Allow-Origin", "*");
 	server.send(500, "text/plain", msg + "\r\n");
-}
-
-void handleSubmit()
-{
-	Serial.println("test99");
-	String string0;
-	String string1;
-	String string2;
-	String string3;
-
-	if (server.hasArg("delay0")) {
-		string0 = server.arg("delay0");
-		Kp = string0.toInt();
-		Serial.println("test3");
-	}
-	if (server.hasArg("delay1")) {
-		string0 = server.arg("delay1");
-		Ki = string1.toInt();
-	}
-	if (server.hasArg("delay2")) {
-		string0 = server.arg("delay2");
-		Kd = string2.toInt();
-	}
-	if (server.hasArg("delay3")) {
-		string0 = server.arg("delay3");
-		Setpoint = string3.toInt();
-	}
-
-	Serial.println("new: " + (String)(int)Kp + (String)(int)Ki + (String)(int)Kd + (String)(int)Setpoint);
-	Serial.println("done");
-	//String page = MAIN_page;
-	//server.send(200, "text/html", page);
-}
-
-void handleKp() {
-	String data = (String)Kp;
-	server.send(200, "text/html", data);
-}
-
-void handleKi() {
-	String data = (String)Ki;
-	server.send(200, "text/html", data);
-}
-
-void handleKd() {
-	String data = (String)Kd;
-	server.send(200, "text/html", data);
-}
-
-void handleSetpoint() {
-	String data = (String)Setpoint;
-	server.send(200, "text/html", data);
-}
-
-void handleInput() {
-	String data = (String)Input;
-	server.send(200, "text/html", data);
-}
-
-void handleOutput() {
-	String data = (String)Output;
-	server.send(200, "text/html", data);
-}
-
-void debug() {
-	String data = "debug Webpage";
-	server.send(200, "text/html", data);
 }
 
 //FULLY_WORKING
@@ -285,8 +187,8 @@ void SendSocket() {
 	//Serial.println("test1");
 		if (changeflag == true) {
 			String stringOne = String('D') + String(',') + (String)(int)Kp + String(',') + (String)(int)Ki + String(',') + (String)(int)Kd + String(',') + (String)(int)Setpoint;
-			Serial.print("this is sent to websocket: ");
-			Serial.println(stringOne);
+			//Serial.print("this is sent to websocket: ");
+			//Serial.println(stringOne);
 			char str[stringOne.length() + 1];
 			stringOne.toCharArray(str, stringOne.length() + 1);
 			webSocket.broadcastTXT(str, sizeof(str));
@@ -339,21 +241,6 @@ void setup() {
 	//Websites######################################################
 	//Pages
 	//Mainseite
-	server.on("/", handlemainweb);
-
-	//datenkomplett
-	server.on("/data.txt", handledata);
-
-	//einzelne Daten
-	server.on("/Kp", handleKp);
-	server.on("/Ki", handleKi);
-	server.on("/Kd", handleKd);
-	server.on("/Setpoint", handleSetpoint);
-	server.on("/Input", handleInput);
-	server.on("/Output", handleOutput);
-
-	server.on("/debug", debug);
-
 	server.onNotFound(handlenotfound);
 	server.begin();
 
@@ -395,7 +282,7 @@ void loop() {
 	const long interval2 = 100;
 	if (currentMillis - previousMillis2 >= interval2) {
 		previousMillis2 = currentMillis;
-		setrpm();
+		//setrpm();
 		SendSocket();
 
 	}

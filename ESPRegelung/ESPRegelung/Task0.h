@@ -49,7 +49,7 @@ function start() {
 	Socket = new WebSocket('ws://' + window.location.hostname + ':81/');
 
 	Socket.onmessage = function(evt) {
-console.log('Server: ' + evt.data);
+	console.log('Server: ' + evt.data);
 	var server_message = evt.data;
 	var server_message_char = server_message.charAt(0);
 
@@ -59,6 +59,7 @@ console.log('Server: ' + evt.data);
 	document.getElementById("Kif").innerHTML = splitString[2];
 	document.getElementById("Kdf").innerHTML = splitString[3];
 	document.getElementById("Setpointf").innerHTML = splitString[4];
+	
 	}
 
 	else if(server_message_char == "R"){
