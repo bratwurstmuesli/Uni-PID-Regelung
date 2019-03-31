@@ -80,21 +80,18 @@ void handlenotfound() {
 	server.sendHeader("Location", "/", true);   //Redirect to our html web page
 	server.send(302, "text/plane", "");
 }
-//|| server.hasArg("delay1") || server.hasArg("delay2") || server.hasArg("delay3")
+
 void handlemainweb() {
 	if (server.hasArg("delay0")) {
 		handleSubmit();
-		Serial.println("test1");
+		//Serial.println("test1");
 	}
 	else {
 		String page = MAIN_page;
 		server.send(200, "text/html", page);
 	}
-	Serial.println("test4");
+	//Serial.println("test4");
 }
-//<INPUT type = "text" style = "width:100px" name = "delay1">
-//<INPUT type = "text" style = "width:100px" name = "delay2">
-//<INPUT type = "text" style = "width:100px" name = "delay3">
 
 void returnFail(String msg)
 {
@@ -105,7 +102,7 @@ void returnFail(String msg)
 
 void handleSubmit()
 {
-	Serial.println("test2");
+	Serial.println("test99");
 	String string0;
 	String string1;
 	String string2;
@@ -173,9 +170,14 @@ void debug() {
 //FULLY_WORKING
 void setrpm() {
 	int analogvalue = analogRead(speedpotpin);
-	int Setpointint = map(analogvalue, 0, 4095, 0, 200);
-	Setpoint = (double)(Setpointint*1000);
-	changeflag = true;
+	int Setpointint = map(analogvalue, 0, 4095, 0, 100);
+	static int Setpointintold;
+	if (Setpointint != Setpointintold) {
+		Setpointintold = Setpointint;
+		Setpoint = (double)(Setpointint * 2000);
+		changeflag = true;
+		Serial.println("rpm set with poti.");
+	}
 }
 
 
@@ -233,11 +235,6 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 		break;
 
 	case WStype_TEXT:
-		for (int i = 0; i < length; i++) {
-			Serial.print((char)payload[i]);
-		}
-		Serial.println();
-
 		char datain[100];
 		if ((char)payload[0] == '#') {
 			for (int i = 1; i < length; i++) {
@@ -273,21 +270,37 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 			}
 			changeflag = true;
 		}
+		else {
+			Serial.print("sent from websocket: ");
+			for (int i = 0; i < length; i++) {
+				Serial.print((char)payload[i]);
+			}
+			Serial.println();
+		}
 		break;
 	}
 }
 
 void SendSocket() {
+	//Serial.println("test1");
 		if (changeflag == true) {
-			String stringOne = 'D' + ',' + (String)Kp + ',' + (String)Ki + ',' + (String)Kp + ',' + (String)Setpoint;
+			String stringOne = String('D') + String(',') + (String)(int)Kp + String(',') + (String)(int)Ki + String(',') + (String)(int)Kd + String(',') + (String)(int)Setpoint;
+			Serial.print("this is sent to websocket: ");
+			Serial.println(stringOne);
 			char str[stringOne.length() + 1];
 			stringOne.toCharArray(str, stringOne.length() + 1);
 			webSocket.broadcastTXT(str, sizeof(str));
+			//Serial.println("test2");
+			//Serial.println(str);
 			changeflag = false;
 		}
-		String stringTwo = 'R' + ',' + (String)Input + ',' + (String)Output;
+		
+		String stringTwo = String('R') + String(',') + (String)(int)Input + String(',') + (String)(int)Output;
+		//Serial.println(stringTwo);
 		char str1[stringTwo.length() + 1];
+
 		stringTwo.toCharArray(str1, stringTwo.length() + 1);
+		//Serial.println(str1);
 		webSocket.broadcastTXT(str1, sizeof(str1));
 	
 }
@@ -355,7 +368,6 @@ void setup() {
 void loop() {
 	//Websocket#####################################################
 	webSocket.loop();
-	SendSocket();
 
 	//Websites######################################################
 	server.handleClient();
@@ -384,6 +396,7 @@ void loop() {
 	if (currentMillis - previousMillis2 >= interval2) {
 		previousMillis2 = currentMillis;
 		setrpm();
+		SendSocket();
 
 	}
 
@@ -394,7 +407,7 @@ void loop() {
 	if (currentMillis - previousMillis1 >= interval1) {
 		previousMillis1 = currentMillis;
 
-		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)rpm;
+		//String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)rpm;
 		//Serial.print(print);
 		//String print2 = +',' + (String)(currentRA.getAverage() * 1000) );
 		//Serial.print(print2);
