@@ -1,46 +1,112 @@
+#include <Wire.h>
 
-const int dataIN = 2; //IR sensor INPUT
+const byte Lichtschrankepin = 2;
+const byte PWMA = 3;
+const byte PWMB = 4;
 
-unsigned long prevmillis; // To store time
-unsigned long duration; // To store time difference
-unsigned long refresh; // To store time for refresh of reading
+//to calculate time between Pulses
+unsigned long revMicros; //zeit dawzischen
+unsigned long revCount;
+unsigned long prevIsrMicros;
+unsigned long latestIsrMicros;
 
-int rpm; // RPM value
+// variables used by the ISR
+volatile unsigned long isrRevMicros = 0; //zeit des neuesten Interrupts
+volatile unsigned long isrRevCount = 0; //wie oft interrupt bisher
+volatile bool isrRevNew = false;
 
-boolean currentstate; // Current state of IR input scan
-boolean prevstate; // State of IR sensor in previous scan
+//RPM
+unsigned long RPM = 0;
+bool rotationNew = false;
 
-void setup()
-{
-	pinMode(dataIN, INPUT);
-	prevmillis = 0;
-	prevstate = LOW;
-	Serial.begin(115200);
+//Drive
+int setPWM = 0;
+
+void revDetectorISR() {
+	isrRevMicros = micros(); //Zeit des Interrupts
+	isrRevCount++; //anzahl der interrupts +1
+	isrRevNew = true; //flag für neue Pulse
 }
 
-void loop()
-{
-	// RPM Measurement
-	currentstate = digitalRead(dataIN); // Read IR sensor state
-	if (prevstate != currentstate) // If there is change in input
-	{
-		if (currentstate == HIGH) // If input only changes from LOW to HIGH
-		{
-			duration = (micros() - prevmillis); // Time difference between revolution in microsecond
-			rpm = (60000000 / duration); // rpm = (1/ time millis)*1000*1000*60;
-			prevmillis = micros(); // store time for nect revolution calculation
+void Rotationverarbeitung() {
+
+	if (isrRevNew == true) { //wenn neue pulse erhalten
+
+		static unsigned long previousMillis = 0;
+		const long interval = 100;
+		unsigned long currentMillis = millis();
+		if (currentMillis - previousMillis >= interval) {
+			previousMillis = currentMillis;
+
+			noInterrupts();
+			//uebertrage Interruptzahl
+			revCount = isrRevCount; //uebertrage isrinterrupts in normale variable
+			isrRevCount = 0;
+			//uebertrage neueste Interrupt Zeit
+			latestIsrMicros = isrRevMicros; //setze den zeitpunkt der letzen berechneten Umdrehung der interruptroutine als neueste Zeit
+			//berechne letzen Zeitpunkt
+			revMicros = latestIsrMicros - prevIsrMicros; //calculate time difference
+			//setze variable damit letzer berechnungspunkt klar
+			prevIsrMicros = latestIsrMicros; //setze neuesten wert als letzen erhaltenen Wert
+			//setze flag fuer nächste berechnung
+			isrRevNew = false; //setze flag false
+			rotationNew = true;
+			interrupts();
 		}
 	}
-	prevstate = currentstate; // store this scan (prev scan) data for next scan
-
-	// LCD Display
-	if ((millis() - refresh) >= 100)
-	{
-		Serial.print(rpm);
-		Serial.print(",");
-		Serial.print("2000");
-		Serial.print(",");
-		Serial.println("0");
+}
+void rotationstoRPM() {
+	if (rotationNew == true) {
+		//Serial.print(revMicros);
+		//Serial.print(",");
+		//Serial.println(revMicros / revCount);
+		RPM = ((60 * 1000 * 1000) / (revMicros / revCount));
+		//Serial.println(RPM);
+		rotationNew = false;
 	}
+}
 
+void receiveEvent(int howMany) {
+	setPWM = Wire.read();    // receive byte as an integer
+	Serial.println(setPWM);
+}
+
+void requestEvent() {
+
+	int32_t bigNum = (unsigned)(long)RPM;
+	Serial.println(bigNum);
+
+	byte myArray[4];
+
+	myArray[0] = (bigNum >> 24) & 0xFF;
+	myArray[1] = (bigNum >> 16) & 0xFF;
+	myArray[2] = (bigNum >> 8) & 0xFF;
+	myArray[3] = bigNum & 0xFF;
+
+	Wire.write(myArray, 4);
+}
+
+void setup() {
+	Serial.begin(115200);
+	pinMode(Lichtschrankepin, INPUT);
+	attachInterrupt(0, revDetectorISR, FALLING);
+
+	pinMode(PWMB, OUTPUT);
+	digitalWrite(PWMB, LOW);
+	analogWrite(PWMB, 0);
+
+	pinMode(PWMA, OUTPUT);
+	analogWrite(PWMA, 254);
+
+	Wire.begin(8);                // join i2c bus with address #8
+	Wire.onReceive(receiveEvent); // register event
+	Wire.onRequest(requestEvent); // register event
+
+	prevIsrMicros = micros();
+}
+
+void loop() {
+	analogWrite(PWMA, setPWM);
+	Rotationverarbeitung();
+	rotationstoRPM();
 }
