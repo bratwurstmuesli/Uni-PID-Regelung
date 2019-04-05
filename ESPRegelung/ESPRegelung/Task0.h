@@ -27,7 +27,7 @@ const char Websocket_page[] PROGMEM = R"=====(
         </tr>
           <tr>
           <td style="width:40px; text-align: right">Setpoint: </td>
-          <td><input class="enabled" id="Setpoint" type="range" min="0" max="10000" step="100" oninput="sendPID();" value="0"></td>
+          <td><input class="enabled" id="Setpoint" type="range" min="0" max="2000" step="10" oninput="sendPID();" value="0"></td>
 		  <td><input type="text" id="Setpointfield" onkeydown="if(event.keyCode == 13) sendPID1();"></td>
 		  <td><p id="Setpointf">0</p></td>
         </tr>

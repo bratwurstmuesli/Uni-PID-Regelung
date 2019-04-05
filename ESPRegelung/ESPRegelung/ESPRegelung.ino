@@ -24,9 +24,10 @@ const char* password = "123mannheim#1";
 WebServer server(80);
 
 //Websocket#####################################################
-WebSocketsServer webSocket = WebSocketsServer(81);
 #include "Task0.h"
 #include "index.h"
+WebSocketsServer webSocket = WebSocketsServer(81);
+
 
 //I2C###########################################################
 #include <Wire.h>
@@ -106,6 +107,7 @@ void sendI2C() {
 	WireONE.endTransmission();    // stop transmitting
 }
 
+
 void receiveI2C() {
 	int32_t bigNum;
 	byte a, b, c, d;
@@ -122,7 +124,14 @@ void receiveI2C() {
 	bigNum = (bigNum << 8) | c;
 	bigNum = (bigNum << 8) | d;
 
-	rpm = (unsigned)(long)bigNum;
+	unsigned long rpmnew = bigNum;
+	myRA.addValue(rpmnew);
+	if (rpmnew > myRA.getAverage() * 1.4) {
+		rpm = myRA.getAverage();
+	}
+	else {
+		rpm = rpmnew;
+	}
 	//Serial.println(bigNum);
 }
 
@@ -140,10 +149,10 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 		char datain[100];
 		if ((char)payload[0] == '#') {
 			for (int i = 1; i < length; i++) {
-				datain[i-1] = (char)payload[i];
+				datain[i - 1] = (char)payload[i];
 			}
 			char delimiter[] = ",";
-			char *ptr;
+			char* ptr;
 
 			// initialisieren und ersten Abschnitt erstellen
 			ptr = strtok(datain, delimiter);
@@ -170,6 +179,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 				}
 				b++;
 			}
+			myPID.SetTunings(Kp, Ki, Kd);
 			changeflag = true;
 		}
 		else {
@@ -185,26 +195,26 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 
 void SendSocket() {
 	//Serial.println("test1");
-		if (changeflag == true) {
-			String stringOne = String('D') + String(',') + (String)(int)Kp + String(',') + (String)(int)Ki + String(',') + (String)(int)Kd + String(',') + (String)(int)Setpoint;
-			//Serial.print("this is sent to websocket: ");
-			//Serial.println(stringOne);
-			char str[stringOne.length() + 1];
-			stringOne.toCharArray(str, stringOne.length() + 1);
-			webSocket.broadcastTXT(str, sizeof(str));
-			//Serial.println("test2");
-			//Serial.println(str);
-			changeflag = false;
-		}
-		
-		String stringTwo = String('R') + String(',') + (String)(int)Input + String(',') + (String)(int)Output;
-		//Serial.println(stringTwo);
-		char str1[stringTwo.length() + 1];
+	if (changeflag == true) {
+		String stringOne = String('D') + String(',') + (String)(int)Kp + String(',') + (String)(int)Ki + String(',') + (String)(int)Kd + String(',') + (String)(int)Setpoint;
+		//Serial.print("this is sent to websocket: ");
+		//Serial.println(stringOne);
+		char str[stringOne.length() + 1];
+		stringOne.toCharArray(str, stringOne.length() + 1);
+		webSocket.broadcastTXT(str, sizeof(str));
+		//Serial.println("test2");
+		//Serial.println(str);
+		changeflag = false;
+	}
 
-		stringTwo.toCharArray(str1, stringTwo.length() + 1);
-		//Serial.println(str1);
-		webSocket.broadcastTXT(str1, sizeof(str1));
-	
+	String stringTwo = String('R') + String(',') + (String)(int)Input + String(',') + (String)(int)Output;
+	//Serial.println(stringTwo);
+	char str1[stringTwo.length() + 1];
+
+	stringTwo.toCharArray(str1, stringTwo.length() + 1);
+	//Serial.println(str1);
+	webSocket.broadcastTXT(str1, sizeof(str1));
+
 }
 
 void setup() {
@@ -265,7 +275,12 @@ void loop() {
 	//PID-Regelung##################################################
 	receiveI2C();
 	pidregel();
-	sendI2C();
+	static double Outputold;
+	if (Outputold != Output) {
+		Outputold = Output;
+		sendI2C();
+	}
+
 
 	//Alle1000ms####################################################
 	static unsigned long previousMillis = 0;
@@ -294,11 +309,11 @@ void loop() {
 	if (currentMillis - previousMillis1 >= interval1) {
 		previousMillis1 = currentMillis;
 
-		//String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)rpm;
-		//Serial.print(print);
+		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)myRA.getAverage(); + ','  + (String)(int)Output + ',' + (String)rpm;
+		Serial.print(print);
 		//String print2 = +',' + (String)(currentRA.getAverage() * 1000) );
 		//Serial.print(print2);
-		//Serial.println();
+		Serial.println();
 
 		//print to websocket
 		//char c[print.length() + 1];
