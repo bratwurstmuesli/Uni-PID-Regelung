@@ -125,7 +125,9 @@ void receiveI2C() {
 	bigNum = (bigNum << 8) | d;
 
 	unsigned long rpmnew = bigNum;
-	myRA.addValue(rpmnew);
+	if (rpmnew < 2000) {
+		myRA.addValue(rpmnew);
+	}
 	if (rpmnew > myRA.getAverage() * 1.4) {
 		rpm = myRA.getAverage();
 	}
@@ -158,20 +160,20 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 			ptr = strtok(datain, delimiter);
 
 			int b = 1;
-			int x = atoi(ptr);
-			Kp = (double)x;
+			double x = atof(ptr);
+			Kp = x;
 			b++;
 			while (ptr != NULL) {
 				//printf("Abschnitt gefunden: %s\n", ptr);
 				//// naechsten Abschnitt erstellen
 				ptr = strtok(NULL, delimiter);
 				if (b == 2) {
-					int y = atoi(ptr);
-					Ki = (double)y;
+					double y = atof(ptr);
+					Ki = y;
 				}
 				else if (b == 3) {
-					int z = atoi(ptr);
-					Kd = (double)z;
+					double z = atof(ptr);
+					Kd = z;
 				}
 				else if (b == 4) {
 					int w = atoi(ptr);
@@ -196,7 +198,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 void SendSocket() {
 	//Serial.println("test1");
 	if (changeflag == true) {
-		String stringOne = String('D') + String(',') + (String)(int)Kp + String(',') + (String)(int)Ki + String(',') + (String)(int)Kd + String(',') + (String)(int)Setpoint;
+		String stringOne = String('D') + String(',') + (String)Kp + String(',') + (String)Ki + String(',') + (String)Kd + String(',') + (String)(int)Setpoint;
 		//Serial.print("this is sent to websocket: ");
 		//Serial.println(stringOne);
 		char str[stringOne.length() + 1];

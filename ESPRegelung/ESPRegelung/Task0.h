@@ -12,17 +12,17 @@ const char Websocket_page[] PROGMEM = R"=====(
       <table>
         <tr>
           <td style="width:40px; text-align: right">Kp: </td>
-          <td><input class="enabled" id="Kp" type="range" min="0" max="10" step="1" oninput="sendPID();" value="0"></td>
+          <td><input class="enabled" id="Kp" type="range" min="0" max="5" step="0.1" oninput="sendPID();" value="0"></td>
 		<td><p id="Kpf">0</p></td>
         </tr>
         <tr>
           <td style="width:40px; text-align: right">Ki: </td>
-          <td><input class="enabled" id="Ki" type="range" min="0" max="10" step="1" oninput="sendPID();" value="0"></td>
+          <td><input class="enabled" id="Ki" type="range" min="0" max="5" step="0.1" oninput="sendPID();" value="0"></td>
 		<td><p id="Kif">0</p></td>
         </tr>
         <tr>
           <td style="width:40px; text-align: right">Kd: </td>
-          <td><input class="enabled" id="Kd" type="range" min="0" max="10" step="1" oninput="sendPID();" value="0"></td>
+          <td><input class="enabled" id="Kd" type="range" min="0" max="5" step="0.1" oninput="sendPID();" value="0"></td>
 		  <td><p id="Kdf">0</p></td>
         </tr>
           <tr>
