@@ -36,10 +36,13 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 TwoWire WireONE = TwoWire(0);
 unsigned long rpm;
 
+boolean newsend;
+boolean newrec;
+
 //PID###########################################################
 #include <PID_v1.h>
 double Setpoint, Input, Output;	//Define Variables we'll be connecting to
-double Kp = 2, Ki = 2, Kd = 0; //Specify the links and initial tuning parameters
+double Kp = 1.30, Ki = 2.10, Kd = 0.10; //Specify the links and initial tuning parameters
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 boolean changeflag = false;
 
@@ -88,13 +91,14 @@ void setrpm() {
 void pidregel() {
 	Input = (double)rpm;
 	myPID.Compute();
+	newsend = true;
 }
 
 //TODO
 void currentsense() {
 	int currentint = analogRead(strompin);
-	current = (currentint * 3.3) / 4096;
-	currentRA.addValue(current);
+	current = ((currentint / 4096) * 3.3)*1000;
+	//currentRA.addValue(current);
 	//Serial.println(currentint);
 	//Serial.print("Volt: ");
 	//Serial.println(current);
@@ -128,13 +132,17 @@ void receiveI2C() {
 	if (rpmnew < 2000) {
 		myRA.addValue(rpmnew);
 	}
-	if (rpmnew > myRA.getAverage() * 1.4) {
+	if (rpmnew > myRA.getAverage() * 1.2) {
+		rpm = myRA.getAverage();
+	}
+	if (rpmnew > myRA.getAverage() + 300) {
 		rpm = myRA.getAverage();
 	}
 	else {
 		rpm = rpmnew;
 	}
 	//Serial.println(bigNum);
+	newrec = true;
 }
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
@@ -195,6 +203,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 	}
 }
 
+
 void SendSocket() {
 	//Serial.println("test1");
 	if (changeflag == true) {
@@ -223,9 +232,6 @@ void setup() {
 	//Serial########################################################
 	Serial.begin(115200);
 	Serial.println("TEST");
-
-	//I2C###########################################################
-	WireONE.begin(SDA1, SCL1, 400000); // SDA pin 21, SCL pin 22 TTGO TQ
 
 	//PID###########################################################
 	myPID.SetOutputLimits(0, 255);
@@ -262,6 +268,9 @@ void setup() {
 	server.on("/websocket", []() {
 		server.send(200, "text/html", Websocket_page);
 	});
+
+	//I2C###########################################################
+	WireONE.begin(SDA1, SCL1, 400000); // SDA pin 21, SCL pin 22 TTGO TQ
 }
 
 void loop() {
@@ -275,22 +284,29 @@ void loop() {
 	//currentsense();
 
 	//PID-Regelung##################################################
-	receiveI2C();
 	pidregel();
+	static unsigned long rpmOld;
+	if (newrec == true) {
+		if (rpm != rpmOld) {
+			pidregel();
+		}
+	}
 	static double Outputold;
-	if (Outputold != Output) {
-		Outputold = Output;
-		sendI2C();
+	if (newsend == true) {
+		if (Outputold != Output) {
+			Outputold = Output;
+			sendI2C();
+		}
 	}
 
 
 	//Alle1000ms####################################################
 	static unsigned long previousMillis = 0;
 	unsigned long currentMillis = millis();
-	const long interval = 1000;
+	const long interval = 1;
 	if (currentMillis - previousMillis >= interval) {
 		previousMillis = currentMillis;
-
+		receiveI2C();
 	}
 
 	//Alle100ms#####################################################
@@ -310,16 +326,10 @@ void loop() {
 	const long interval1 = 10;
 	if (currentMillis - previousMillis1 >= interval1) {
 		previousMillis1 = currentMillis;
-
-		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)myRA.getAverage(); + ','  + (String)(int)Output + ',' + (String)rpm;
+		currentsense();
+		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)rpm + ',' + (String)(int)myRA.getAverage(); +',' + (String)(int)Output + ',' + (String)rpm + ',' + (String)current;
 		Serial.print(print);
-		//String print2 = +',' + (String)(currentRA.getAverage() * 1000) );
-		//Serial.print(print2);
 		Serial.println();
-
-		//print to websocket
-		//char c[print.length() + 1];
-		//print.toCharArray(c, print.length()+1);
-		//webSocket.broadcastTXT(c, sizeof(c));
+		//
 	}
 }
