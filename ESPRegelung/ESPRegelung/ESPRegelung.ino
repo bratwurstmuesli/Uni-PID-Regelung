@@ -7,11 +7,9 @@
 
 
 //TODO
-//PID values with double
 //draw graph
 //implement current measurement
 //cascade control
-
 
 //Webserver#####################################################
 #include <WiFi.h>
@@ -19,9 +17,11 @@
 #include <WebServer.h>
 #include <ESPmDNS.h>
 #include <WebSocketsServer.h>
+
 const char* ssid = "\xe2\x9c\x8c\xef\xb8\x8f\xf0\x9f\x98\x81\xe2\x9c\x8c\xef\xb8\x8f";
 const char* password = "123mannheim#1";
 WebServer server(80);
+
 
 //Websocket#####################################################
 #include "Task0.h"
@@ -39,19 +39,20 @@ unsigned long rpm;
 boolean newsend;
 boolean newrec;
 
+long newValuetime;
 //PID###########################################################
 #include <PID_v1.h>
-double Setpoint, Input, Output;	//Define Variables we'll be connecting to
+double Setpoint = 1000;
+double Input, Output;	//Define Variables we'll be connecting to
 double Kp = 1.30, Ki = 2.10, Kd = 0.10; //Specify the links and initial tuning parameters
-const int SampleTime = 100;
+long SampleTime = 100;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 boolean changeflag = false;
 
 //RunningAverage###############################################
 #include "RunningAverage.h"
-RunningAverage myRA(100);
-RunningAverage currentRA(100);
-RunningAverage OutputRA(50);
+RunningAverage InputRA(2);
+
 
 //speedpot######################################################
 const byte speedpotpin = 33;
@@ -93,7 +94,6 @@ void setrpm() {
 void pidregel() {
 	Input = (double)rpm;
 	myPID.Compute();
-	OutputRA.addValue((int)Output);
 	newsend = true;
 }
 
@@ -110,11 +110,14 @@ void currentsense() {
 //FULLY-WORKING
 void sendI2C() {
 	WireONE.beginTransmission(8); // transmit to device #8
-	WireONE.write((int)OutputRA.getAverage());   // sends
+	WireONE.write((int)Output);   // sends
 	WireONE.endTransmission();    // stop transmitting
 }
 
-
+//FULLY WORKING
+//receive I2C
+//wert wird rpm
+//zeit zwischen aktualisierung eines neuen Wertes
 void receiveI2C() {
 	int32_t bigNum;
 	byte a, b, c, d;
@@ -132,21 +135,23 @@ void receiveI2C() {
 	bigNum = (bigNum << 8) | d;
 
 	unsigned long rpmnew = bigNum;
-	//if (rpmnew < 2000) {
-	//	myRA.addValue(rpmnew);
-	//}
-	//if (rpmnew > myRA.getAverage() * 1.2) {
-	//	rpm = myRA.getAverage();
-	//}
-	//if (rpmnew > myRA.getAverage() + 300) {
-	//	rpm = myRA.getAverage();
-	//}
-	//else {
-		rpm = rpmnew;
-	//}
-	//rpm = myRA.getAverage();
-	//Serial.println(bigNum);
-	newrec = true;
+	static unsigned long rpmoldnewvalue;
+	if (rpm != rpmnew) {
+		newValuetime = micros() - rpmoldnewvalue;
+		SampleTime = newValuetime / 1000;
+		myPID.SetSampleTime(SampleTime);
+		rpmoldnewvalue = micros();
+		//Serial.println(newValuetime);
+		if (rpmnew < 10000) {
+			rpm = rpmnew;
+			InputRA.addValue(rpm);
+		}
+		else {
+		}
+		newrec = true;
+
+	}
+
 }
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
@@ -300,6 +305,7 @@ void loop() {
 		sendI2C();
 		newrec = false;
 	}
+	receiveI2C();
 	//}
 	//static double Outputold;
 	//if (newsend == true) {
@@ -316,7 +322,7 @@ void loop() {
 	const long interval = 10;
 	if (currentMillis - previousMillis >= interval) {
 		previousMillis = currentMillis;
-		receiveI2C();
+
 	}
 
 	//Alle100ms#####################################################
@@ -329,17 +335,14 @@ void loop() {
 
 	}
 
-	
-	//Serial.println((String)OutputRA.getAverage());
-	//Serial.println();
 	//Alle10ms######################################################
 	static unsigned long previousMillis1 = 0;
 	currentMillis = millis();
-	const long interval1 = 10;
+	const long interval1 = 1;
 	if (currentMillis - previousMillis1 >= interval1) {
 		previousMillis1 = currentMillis;
 		currentsense();
-		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)rpm + ',';
+		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)rpm + ',' + (String)(int)Output + ',' + (String)(int)InputRA.getAverage();
 		Serial.println(print);
 		//
 	}

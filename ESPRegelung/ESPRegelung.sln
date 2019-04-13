@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.28729.10
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ESPRegelung", "ESPRegelung\ESPRegelung.vcxproj", "{C5F80730-F44F-4478-BDAE-6634EFC2CA88}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Uni_PID_Regelung_Arduino", "..\..\..\..\Documents\Arduino\Uni_PID_Regelung_Arduino\Uni_PID_Regelung_Arduino.vcxproj", "{109BFA83-353F-4748-A067-EA1C8F5548D8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Uni_PID_Regelung_Arduino", "..\Uni_PID_Regelung_Arduino\Uni_PID_Regelung_Arduino.vcxproj", "{109BFA83-353F-4748-A067-EA1C8F5548D8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

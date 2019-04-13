@@ -24,22 +24,31 @@ void revDetectorISR() {
 
 //Funktion zur berechnung der RPM
 void Rotationverarbeitung() {
+	unsigned long vergangeneZeit = micros() - timeold;
 	if (isrRevCount != 0) { //wenn neue pulse erhalten
 		noInterrupts();
-		RPM = (30000000 / (micros() - timeold));
+		RPM = 30000000 / vergangeneZeit;
 		isrRevCount = 0;
 		timeold = micros();
 		interrupts();
-		Serial.println("3000,0," + RPM);
+	}
+	else if (vergangeneZeit > 1000000 && RPM != 0) { // um keine umdrehung zu erkennen
+		RPM = 0;
 	}
 }
 
 //FULLY WORKING
 void receiveEvent(int howMany) {
 	int setPWMread = Wire.read();    // receive byte as an integer
-	if (setPWMread != setPWM) { //ausführen wenn neuer wert angekommen
-		analogWrite(PWMA, setPWM); //PWM ausführen
-		setPWM = setPWMread;
+	//Serial.println(setPWMread);
+	if (setPWMread != setPWM) { // nur ausführen wenn neuer wert angekommen
+		if (setPWMread >= 0 && setPWMread < 256) { //wenn ein PWM Wert sonst 0 pwm ausführen
+			setPWM = setPWMread;
+			analogWrite(PWMA, setPWM); //PWM ausführen
+		}
+		else {
+			analogWrite(PWMA, 0);
+		}
 	}
 }
 
@@ -58,6 +67,7 @@ void requestEvent() {
 void setup() {
 	//Serial
 	Serial.begin(115200);
+	Serial.println("test Arduino");
 	//########################################################################
 		//RPMMEssung
 	pinMode(Lichtschrankepin, INPUT);
@@ -76,4 +86,8 @@ void setup() {
 
 void loop() {
 	Rotationverarbeitung();
+	//Serial.print("3000,0,");
+	//Serial.print(RPM);
+	//Serial.print(",");
+	//Serial.println(setPWM);
 }

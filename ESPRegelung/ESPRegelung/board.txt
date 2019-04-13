@@ -1,0 +1,3 @@
+# ESPRegelung build property overrides
+#
+network.port=3232
