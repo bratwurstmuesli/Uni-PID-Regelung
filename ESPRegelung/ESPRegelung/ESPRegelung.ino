@@ -92,7 +92,8 @@ void setrpm() {
 
 //OKAISH-WORKING
 void pidregel() {
-	Input = (double)rpm;
+	Input = (double)InputRA.getAverage();
+	//Input = (double)rpm;
 	myPID.Compute();
 	newsend = true;
 }
@@ -142,9 +143,9 @@ void receiveI2C() {
 		myPID.SetSampleTime(SampleTime);
 		rpmoldnewvalue = micros();
 		//Serial.println(newValuetime);
-		if (rpmnew < 10000) {
+		if (rpmnew < 3000) {
 			rpm = rpmnew;
-			InputRA.addValue(rpm);
+			InputRA.addValue(rpmnew);
 		}
 		else {
 		}
@@ -299,13 +300,16 @@ void loop() {
 
 	//PID-Regelung##################################################
 	//static unsigned long rpmOld;
+	receiveI2C();
 	if (newrec == true) {
 		//if (rpm != rpmOld) {
 		pidregel();
 		sendI2C();
 		newrec = false;
+		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)(int)InputRA.getAverage();
+		Serial.println(print);
 	}
-	receiveI2C();
+
 	//}
 	//static double Outputold;
 	//if (newsend == true) {
@@ -342,8 +346,7 @@ void loop() {
 	if (currentMillis - previousMillis1 >= interval1) {
 		previousMillis1 = currentMillis;
 		currentsense();
-		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)rpm + ',' + (String)(int)Output + ',' + (String)(int)InputRA.getAverage();
-		Serial.println(print);
+
 		//
 	}
 }
