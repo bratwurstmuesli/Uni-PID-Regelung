@@ -75,8 +75,10 @@ void setup() {
 	//########################################################################
 		//PWM H-Brücke
 	pinMode(PWMB, OUTPUT);
-	analogWrite(PWMB, 0);
+	digitalWrite(PWMB, 0);
 	pinMode(PWMA, OUTPUT);
+	//LED
+	pinMode(8, OUTPUT);
 	//########################################################################
 		//I2C Connection
 	Wire.begin(8);                // join i2c bus with address #8
@@ -86,8 +88,14 @@ void setup() {
 
 void loop() {
 	Rotationverarbeitung();
-	//Serial.print("3000,0,");
+	//Serial.print("2000,0,");
 	//Serial.print(RPM);
 	//Serial.print(",");
 	//Serial.println(setPWM);
+	if (setPWM >= 255) {
+		digitalWrite(8, HIGH);
+	}
+	else {
+		digitalWrite(8, LOW);
+	}
 }

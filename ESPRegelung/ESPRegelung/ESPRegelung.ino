@@ -11,6 +11,9 @@
 //implement current measurement
 //cascade control
 
+
+
+
 //Webserver#####################################################
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -18,10 +21,14 @@
 #include <ESPmDNS.h>
 #include <WebSocketsServer.h>
 
+
 const char* ssid = "\xe2\x9c\x8c\xef\xb8\x8f\xf0\x9f\x98\x81\xe2\x9c\x8c\xef\xb8\x8f";
 const char* password = "123mannheim#1";
 WebServer server(80);
 
+//median filter
+#include <MedianFilter.h>
+MedianFilter test(15, 0);
 
 //Websocket#####################################################
 #include "Task0.h"
@@ -52,14 +59,15 @@ boolean changeflag = false;
 //RunningAverage###############################################
 #include "RunningAverage.h"
 RunningAverage InputRA(2);
-
+RunningAverage InputNice(15);
+RunningAverage CurrentRA(2000);
 
 //speedpot######################################################
 const byte speedpotpin = 33;
 
 //Stromstärke-Messung###########################################
 //MAX471
-const byte strompin = 25;
+const byte strompin = 33;
 float current;
 
 
@@ -101,9 +109,11 @@ void pidregel() {
 //TODO
 void currentsense() {
 	int currentint = analogRead(strompin);
-	current = ((currentint / 4096) * 3.3) * 1000;
-	//currentRA.addValue(current);
 	//Serial.println(currentint);
+	//current = ((currentint / 4096) * 3.3) * 1000;
+	CurrentRA.addValue(currentint);
+	//currentRA.addValue(current);
+	Serial.println(currentint);
 	//Serial.print("Volt: ");
 	//Serial.println(current);
 }
@@ -143,12 +153,20 @@ void receiveI2C() {
 		myPID.SetSampleTime(SampleTime);
 		rpmoldnewvalue = micros();
 		//Serial.println(newValuetime);
-		if (rpmnew < 3000) {
+
+
+		test.in(rpmnew);
+		if (rpmnew > test.out() * 1.2) {
 			rpm = rpmnew;
-			InputRA.addValue(rpmnew);
+			InputRA.addValue(test.out());
 		}
 		else {
+			InputRA.addValue(rpmnew);
+			rpm = rpmnew;
 		}
+		InputNice.addValue(InputRA.getAverage());
+
+
 		newrec = true;
 
 	}
@@ -228,7 +246,7 @@ void SendSocket() {
 		changeflag = false;
 	}
 
-	String stringTwo = String('R') + String(',') + (String)(int)Input + String(',') + (String)(int)Output;
+	String stringTwo = String('R') + String(',') + (String)(int)InputNice.getAverage() + String(',') + (String)(int)Output;
 	//Serial.println(stringTwo);
 	char str1[stringTwo.length() + 1];
 
@@ -306,7 +324,9 @@ void loop() {
 		pidregel();
 		sendI2C();
 		newrec = false;
-		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)(int)InputRA.getAverage();
+		//currentsense();
+
+		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)(int)InputRA.getAverage() + ',' + (String)(int)InputNice.getAverage() + ',' + (String)(int)CurrentRA.getAverage();
 		Serial.println(print);
 	}
 
@@ -339,10 +359,10 @@ void loop() {
 
 	}
 
-	//Alle10ms######################################################
+	//Alle10MICROSEKUNDE######################################################
 	static unsigned long previousMillis1 = 0;
-	currentMillis = millis();
-	const long interval1 = 1;
+	currentMillis = micros();
+	const long interval1 = 30;
 	if (currentMillis - previousMillis1 >= interval1) {
 		previousMillis1 = currentMillis;
 		currentsense();

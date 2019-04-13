@@ -11,33 +11,33 @@ const char Websocket_page[] PROGMEM = R"=====(
     <div>
       <table style="width: 100%;">
         <tr>
-          <td style="width:40px; text-align: right">Kp: </td>
-          <td><input class="enabled" style="width: 100%;" id="Kp" type="range" min="0" max="5" step="0.01" oninput="sendPID();" value="1.30"></td>
-		<td><p id="Kpf">0</p></td>
+          <td style="width: 10%; text-align: right;">Kp: </td>
+          <td style="width: 60%;"><input class="enabled" style="width: 100%;" id="Kp" type="range" min="0" max="5" step="0.01" oninput="sendPID();" value="1.30"></td>
+		<td style="width: 20%;"><p id="Kpf">0</p></td>
         </tr>
         <tr>
-          <td style="width:40px; text-align: right">Ki: </td>
-          <td><input class="enabled" style="width: 100%;" id="Ki" type="range" min="0" max="5" step="0.01" oninput="sendPID();" value="2.10"></td>
-		<td><p id="Kif">0</p></td>
+          <td style="width: 10%; text-align: right;">Ki: </td>
+          <td style="width: 60%;"><input class="enabled" style="width: 100%;" id="Ki" type="range" min="0" max="5" step="0.01" oninput="sendPID();" value="2.10"></td>
+		<td style="width: 20%;"><p id="Kif">0</p></td>
         </tr>
         <tr>
-          <td style="width:40px; text-align: right">Kd: </td>
-          <td><input class="enabled" style="width: 100%;" id="Kd" type="range" min="0" max="5" step="0.01" oninput="sendPID();" value="0.10"></td>
-		  <td><p id="Kdf">0</p></td>
+          <td style="width: 10%; text-align: right;">Kd: </td>
+          <td style="width: 60%;"><input class="enabled" style="width: 100%;" id="Kd" type="range" min="0" max="5" step="0.01" oninput="sendPID();" value="0.10"></td>
+		  <td style="width: 20%;"><p id="Kdf">0</p></td>
         </tr>
           <tr>
-          <td style="width:40px; text-align: right">Setpoint: </td>
-          <td><input class="enabled" id="Setpoint" type="range" min="0" max="2500" step="10" oninput="sendPID();" value="0"></td>
-		  <td><input type="text" id="Setpointfield" onkeydown="if(event.keyCode == 13) sendPID1();"></td>
-		  <td><p id="Setpointf">0</p></td>
+          <td style="width: 10%; text-align: right;">Setpoint: </td>
+          <td style="width: 60%;"><input class="enabled" style="width: 100%;" id="Setpoint" type="range" min="0" max="2500" step="10" oninput="sendPID();" value="1000"></td>
+		  <td style="width: 20%;"><input type="text" style="width: 90%;" id="Setpointfield" onkeydown="if(event.keyCode == 13) sendPID1();"></td>
+		  <td style="width: 10%;"><p style="text-align: left;" id="Setpointf">0</p></td>
         </tr>
 		<tr>
-          <td style="width:40px; text-align: right">Input: </td>
-		<td><p id="Inputf">0</p></td>
+          <td style="width: 10%; text-align: right;">Input: </td>
+		<td style="width: 60%;"><p id="Inputf">0</p></td>
         </tr>
 		<tr>
-          <td style="width:40px; text-align: right">Output: </td>
-		<td><p id="Outputf">0</p></td>
+          <td style="width: 10%; text-align: right;">Output: </td>
+		<td style="width: 60%;"><p id="Outputf">0</p></td>
         </tr>
       </table>
     </div>
