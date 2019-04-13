@@ -60,7 +60,7 @@ boolean changeflag = false;
 #include "RunningAverage.h"
 RunningAverage InputRA(2);
 RunningAverage InputNice(15);
-RunningAverage CurrentRA(2000);
+RunningAverage CurrentRA(100000);
 
 //speedpot######################################################
 const byte speedpotpin = 33;
@@ -68,6 +68,7 @@ const byte speedpotpin = 33;
 //Stromstärke-Messung###########################################
 //MAX471
 const byte strompin = 33;
+const byte groundpin = 26;
 float current;
 
 
