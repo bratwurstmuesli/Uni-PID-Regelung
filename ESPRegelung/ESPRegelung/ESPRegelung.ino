@@ -43,6 +43,7 @@ boolean newrec;
 #include <PID_v1.h>
 double Setpoint, Input, Output;	//Define Variables we'll be connecting to
 double Kp = 1.30, Ki = 2.10, Kd = 0.10; //Specify the links and initial tuning parameters
+const int SampleTime = 100;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 boolean changeflag = false;
 
@@ -50,6 +51,7 @@ boolean changeflag = false;
 #include "RunningAverage.h"
 RunningAverage myRA(100);
 RunningAverage currentRA(100);
+RunningAverage OutputRA(50);
 
 //speedpot######################################################
 const byte speedpotpin = 33;
@@ -91,13 +93,14 @@ void setrpm() {
 void pidregel() {
 	Input = (double)rpm;
 	myPID.Compute();
+	OutputRA.addValue((int)Output);
 	newsend = true;
 }
 
 //TODO
 void currentsense() {
 	int currentint = analogRead(strompin);
-	current = ((currentint / 4096) * 3.3)*1000;
+	current = ((currentint / 4096) * 3.3) * 1000;
 	//currentRA.addValue(current);
 	//Serial.println(currentint);
 	//Serial.print("Volt: ");
@@ -107,7 +110,7 @@ void currentsense() {
 //FULLY-WORKING
 void sendI2C() {
 	WireONE.beginTransmission(8); // transmit to device #8
-	WireONE.write((int)Output);   // sends
+	WireONE.write((int)OutputRA.getAverage());   // sends
 	WireONE.endTransmission();    // stop transmitting
 }
 
@@ -129,18 +132,19 @@ void receiveI2C() {
 	bigNum = (bigNum << 8) | d;
 
 	unsigned long rpmnew = bigNum;
-	if (rpmnew < 2000) {
-		myRA.addValue(rpmnew);
-	}
-	if (rpmnew > myRA.getAverage() * 1.2) {
-		rpm = myRA.getAverage();
-	}
-	if (rpmnew > myRA.getAverage() + 300) {
-		rpm = myRA.getAverage();
-	}
-	else {
+	//if (rpmnew < 2000) {
+	//	myRA.addValue(rpmnew);
+	//}
+	//if (rpmnew > myRA.getAverage() * 1.2) {
+	//	rpm = myRA.getAverage();
+	//}
+	//if (rpmnew > myRA.getAverage() + 300) {
+	//	rpm = myRA.getAverage();
+	//}
+	//else {
 		rpm = rpmnew;
-	}
+	//}
+	//rpm = myRA.getAverage();
 	//Serial.println(bigNum);
 	newrec = true;
 }
@@ -228,6 +232,11 @@ void SendSocket() {
 
 }
 
+void checkStall() {
+	//write value to array and check when value < 500 ob gleich bleibt
+	//wenn ja gib mal gas, wenn nicht dann ists so weit runtergeregelt
+}
+
 void setup() {
 	//Serial########################################################
 	Serial.begin(115200);
@@ -236,7 +245,7 @@ void setup() {
 	//PID###########################################################
 	myPID.SetOutputLimits(0, 255);
 	myPID.SetMode(AUTOMATIC);
-
+	myPID.SetSampleTime(SampleTime);
 	//Wifi##########################################################
 	WiFi.mode(WIFI_STA);
 	WiFi.begin(ssid, password);
@@ -284,26 +293,27 @@ void loop() {
 	//currentsense();
 
 	//PID-Regelung##################################################
-	pidregel();
-	static unsigned long rpmOld;
+	//static unsigned long rpmOld;
 	if (newrec == true) {
-		if (rpm != rpmOld) {
-			pidregel();
-		}
+		//if (rpm != rpmOld) {
+		pidregel();
+		sendI2C();
+		newrec = false;
 	}
-	static double Outputold;
-	if (newsend == true) {
-		if (Outputold != Output) {
-			Outputold = Output;
-			sendI2C();
-		}
-	}
+	//}
+	//static double Outputold;
+	//if (newsend == true) {
+	//	if (Outputold != Output) {
+	//		Outputold = Output;
+
+	//	}
+	//}
 
 
 	//Alle1000ms####################################################
 	static unsigned long previousMillis = 0;
 	unsigned long currentMillis = millis();
-	const long interval = 1;
+	const long interval = 10;
 	if (currentMillis - previousMillis >= interval) {
 		previousMillis = currentMillis;
 		receiveI2C();
@@ -315,11 +325,13 @@ void loop() {
 	const long interval2 = 100;
 	if (currentMillis - previousMillis2 >= interval2) {
 		previousMillis2 = currentMillis;
-		//setrpm();
 		SendSocket();
 
 	}
 
+	
+	//Serial.println((String)OutputRA.getAverage());
+	//Serial.println();
 	//Alle10ms######################################################
 	static unsigned long previousMillis1 = 0;
 	currentMillis = millis();
@@ -327,9 +339,8 @@ void loop() {
 	if (currentMillis - previousMillis1 >= interval1) {
 		previousMillis1 = currentMillis;
 		currentsense();
-		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)rpm + ',' + (String)(int)myRA.getAverage(); +',' + (String)(int)Output + ',' + (String)rpm + ',' + (String)current;
-		Serial.print(print);
-		Serial.println();
+		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)rpm + ',';
+		Serial.println(print);
 		//
 	}
 }

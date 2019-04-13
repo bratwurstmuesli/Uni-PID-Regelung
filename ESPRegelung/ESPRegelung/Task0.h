@@ -9,20 +9,20 @@ const char Websocket_page[] PROGMEM = R"=====(
       <h1>PID Regelung</h1>
     </header>
     <div>
-      <table>
+      <table style="width: 100%;">
         <tr>
           <td style="width:40px; text-align: right">Kp: </td>
-          <td><input class="enabled" id="Kp" type="range" min="0" max="5" step="0.1" oninput="sendPID();" value="1.30"></td>
+          <td><input class="enabled" style="width: 100%;" id="Kp" type="range" min="0" max="5" step="0.01" oninput="sendPID();" value="1.30"></td>
 		<td><p id="Kpf">0</p></td>
         </tr>
         <tr>
           <td style="width:40px; text-align: right">Ki: </td>
-          <td><input class="enabled" id="Ki" type="range" min="0" max="5" step="0.1" oninput="sendPID();" value="2.10"></td>
+          <td><input class="enabled" style="width: 100%;" id="Ki" type="range" min="0" max="5" step="0.01" oninput="sendPID();" value="2.10"></td>
 		<td><p id="Kif">0</p></td>
         </tr>
         <tr>
           <td style="width:40px; text-align: right">Kd: </td>
-          <td><input class="enabled" id="Kd" type="range" min="0" max="5" step="0.1" oninput="sendPID();" value="0.10"></td>
+          <td><input class="enabled" style="width: 100%;" id="Kd" type="range" min="0" max="5" step="0.01" oninput="sendPID();" value="0.10"></td>
 		  <td><p id="Kdf">0</p></td>
         </tr>
           <tr>
