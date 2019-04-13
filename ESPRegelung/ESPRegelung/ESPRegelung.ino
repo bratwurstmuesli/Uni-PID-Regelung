@@ -69,6 +69,7 @@ const byte speedpotpin = 33;
 //MAX471
 const byte strompin = 33;
 const byte groundpin = 26;
+RunningAverage CurrentRA2(100);
 float current;
 
 
@@ -114,7 +115,7 @@ void currentsense() {
 	//current = ((currentint / 4096) * 3.3) * 1000;
 	CurrentRA.addValue(currentint);
 	//currentRA.addValue(current);
-	Serial.println(currentint);
+	//Serial.println(currentint);
 	//Serial.print("Volt: ");
 	//Serial.println(current);
 }
@@ -305,6 +306,10 @@ void setup() {
 
 	//I2C###########################################################
 	WireONE.begin(SDA1, SCL1, 400000); // SDA pin 21, SCL pin 22 TTGO TQ
+
+//stromsensor
+	pinMode(groundpin, OUTPUT);
+	digitalWrite(groundpin, LOW);
 }
 
 void loop() {
@@ -326,9 +331,25 @@ void loop() {
 		sendI2C();
 		newrec = false;
 		//currentsense();
+		int currentaverage = CurrentRA.getAverage();
+		if (currentaverage <= 10000) {
+			float currentaveragefloat = ((currentaverage / 4096.00) * 3.30) * 1000.00;
+			currentaverage = (int)currentaveragefloat;
+			CurrentRA2.addValue(currentaverage);
+			int currentaveragefinal;
+			static unsigned long previousMillis5 = 0;
+			unsigned long currentMillis5 = millis();
+			const long interval5 = 10;
+			if (currentMillis5 - previousMillis5 >= interval5) {
+				previousMillis5 = currentMillis5;
+				currentaveragefinal = CurrentRA2.getAverage();
+			}
+			if (currentaveragefinal < 10000) {
+				String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)(int)InputRA.getAverage() + ',' + (String)(int)InputNice.getAverage() + ',' + (String)(int)currentaveragefinal;
+				Serial.println(print);
+			}
+		}
 
-		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)(int)InputRA.getAverage() + ',' + (String)(int)InputNice.getAverage() + ',' + (String)(int)CurrentRA.getAverage();
-		Serial.println(print);
 	}
 
 	//}
@@ -363,7 +384,7 @@ void loop() {
 	//Alle10MICROSEKUNDE######################################################
 	static unsigned long previousMillis1 = 0;
 	currentMillis = micros();
-	const long interval1 = 30;
+	const long interval1 = 1000;
 	if (currentMillis - previousMillis1 >= interval1) {
 		previousMillis1 = currentMillis;
 		currentsense();
