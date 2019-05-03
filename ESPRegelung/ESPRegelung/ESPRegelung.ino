@@ -14,8 +14,14 @@
 #include <ESPmDNS.h>
 #include <WebSocketsServer.h>
 
+//name meines wlans daheim
 const char* ssid = "\xe2\x9c\x8c\xef\xb8\x8f\xf0\x9f\x98\x81\xe2\x9c\x8c\xef\xb8\x8f";
 const char* password = "123mannheim#1";
+
+//hier gewünschten hotspotnamen eingeben
+const char* ssid1 = "DHBW Drehzahlregelung";
+const char* password1 = "studienarbeit";
+
 WebServer server(80);
 
 //Websocket#####################################################
@@ -374,8 +380,11 @@ void SendSocket() {
 void outputSerial() {
 	//Serial.println("anfang serialoutput");
 	if (currentaveragefinal < 10000) { //sonst liefert es -1 was als eine seeehr große Zahl erkannt wird weil nicht unsigned. daher nur ausgeben wenn denn der Wert passt.
-		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)(int)InputRA.getAverage() + ',' + (String)(int)InputNice.getAverage() + ',' + (String)(int)currentaveragefinal;
+		String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)InputNice.getAverage();
 		Serial.println(print);
+		//alternativ:
+		//String print = "2000,0," + (String)(int)Setpoint + ',' + (String)(int)Output + ',' + (String)(int)InputRA.getAverage() + ',' + (String)(int)InputNice.getAverage() + ',' + (String)(int)currentaveragefinal;
+		//Serial.println(print);
 	}
 }
 void anschieben() {
@@ -394,12 +403,16 @@ void setup() {
 	myPID.SetSampleTime(SampleTime);
 
 	//Wifi##########################################################
-	WiFi.mode(WIFI_STA);
-	WiFi.begin(ssid, password);
-	while (WiFi.status() != WL_CONNECTED) {
-		delay(500);
-		Serial.print(".");
-	}
+	//zum Wlan connecten
+	//WiFi.mode(WIFI_STA);
+	//WiFi.begin(ssid, password);
+	//while (WiFi.status() != WL_CONNECTED) {
+	//	delay(500);
+	//	Serial.print(".");
+	//}
+	//neues Wlan aufmachen
+	WiFi.softAP(ssid1, password1);
+	//++++++++++++++++++++++++++++++++++
 	Serial.println("");
 	Serial.print("Connected to ");
 	Serial.println(ssid);
