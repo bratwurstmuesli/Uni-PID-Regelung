@@ -16,6 +16,8 @@ int setPWM;
 const byte PWMA = 4;
 const byte PWMB = 5;
 //########################################################################
+//ausschalten nach bestimmter zeit wenn kein neuer i2c
+//unsigned long zeitletztemeldung;
 
 //Interrupt
 void revDetectorISR() {
@@ -29,8 +31,9 @@ void Rotationverarbeitung() {
 		noInterrupts();
 		RPM = 30000000 / vergangeneZeit;
 		isrRevCount = 0;
-		timeold = micros();
+		timeold = micros(); //hier ist der anfang der naechsten umdrehung
 		interrupts();
+		Serial.println(RPM);
 	}
 	else if (vergangeneZeit > 1000000 && RPM != 0) { // um keine umdrehung zu erkennen
 		RPM = 0;
@@ -40,7 +43,9 @@ void Rotationverarbeitung() {
 //FULLY WORKING
 void receiveEvent(int howMany) {
 	int setPWMread = Wire.read();    // receive byte as an integer
-	//Serial.println(setPWMread);
+	//zeitletztemeldung = millis();
+	Serial.println("neuer PWM: ");
+	Serial.println(setPWMread);
 	if (setPWMread != setPWM) { // nur ausführen wenn neuer wert angekommen
 		if (setPWMread >= 0 && setPWMread < 256) { //wenn ein PWM Wert sonst 0 pwm ausführen
 			setPWM = setPWMread;
@@ -49,6 +54,12 @@ void receiveEvent(int howMany) {
 		else {
 			analogWrite(PWMA, 0);
 		}
+	}
+	if (setPWM >= 255) {
+		digitalWrite(8, HIGH);
+	}
+	else {
+		digitalWrite(8, LOW);
 	}
 }
 
@@ -88,14 +99,12 @@ void setup() {
 
 void loop() {
 	Rotationverarbeitung();
+	//if (millis() - zeitletztemeldung > 2000) { //ausschalten nach 2s ohne meldung vom ESP32
+		//analogWrite(PWMA, 100);
+	//}
 	//Serial.print("2000,0,");
-	//Serial.print(RPM);
+	/*Serial.print(RPM);*/
 	//Serial.print(",");
 	//Serial.println(setPWM);
-	if (setPWM >= 255) {
-		digitalWrite(8, HIGH);
-	}
-	else {
-		digitalWrite(8, LOW);
-	}
+
 }
